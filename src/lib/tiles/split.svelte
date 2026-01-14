@@ -1,9 +1,9 @@
 <script lang="ts" module>
 	import type { Snippet } from 'svelte';
 
-	import type { Tile, Tiles } from '../tile.ts';
+	import { getTileComponent, getTilerContext } from '$lib/context.js';
 
-	import Split from './split.svelte';
+	import type { Tile, Tiles } from '../tile.js';
 
 	export type Direction = 'row' | 'column';
 
@@ -31,8 +31,7 @@
 			type: 'split',
 			children: options.children,
 			direction: options.direction ?? 'row',
-			weights: options.weights ?? options.children.map(one),
-			render: options.render ?? split
+			weights: options.weights ?? options.children.map(one)
 		};
 	}
 
@@ -49,42 +48,80 @@
 			children
 		});
 	}
-
-	export { split };
 </script>
 
 <script lang="ts">
-	import type { HTMLAttributes } from 'svelte/elements';
+	const { tile }: { tile: Tiles['split'] } = $props();
 
-	const {
-		tile,
-		class: className,
-		...rest
-	}: { tile: Tiles['split'] } & HTMLAttributes<HTMLDivElement> = $props();
+	const ctx = getTilerContext();
 </script>
 
-{#snippet split(tile: Tiles['split'])}
-	<Split {tile} />
-{/snippet}
-
-<div class={['split-container', tile.direction, className]} {...rest}>
+<div class="split" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
-		<div class="item">
-			Tile {i}
+		{@const Component = getTileComponent(ctx, t)}
+		<div class="item" style="--grow: {tile.weights[i]}">
+			{#if i > 0}
+				<div class="resizer"></div>
+			{/if}
+			<Component tile={t as never} />
 		</div>
 	{/each}
 </div>
 
 <style>
-	.split-container {
+	.split {
 		display: flex;
+		overflow: hidden;
+
+		.item {
+			position: relative;
+			flex: var(--grow) 0 auto;
+		}
+
+		.resizer {
+			position: absolute;
+		}
+
+		&[data-dir='row'] {
+			flex-direction: row;
+		}
+		&[data-dir='column'] {
+			flex-direction: column;
+		}
 	}
-	.row {
-		flex-direction: row;
+
+	/* .resizer[data-dir='row'] {
+		cursor: col-resize;
+		width: var(--size);
+		height: 100%;
+		left: calc(-1 * var(--size) / 2);
 	}
-	.column {
-		flex-direction: column;
+
+	.resizer[data-dir='column'] {
+		cursor: row-resize;
+		height: var(--size);
+		width: 100%;
+		top: calc(-1 * var(--size) / 2);
 	}
-	.item {
+	.resizer::before {
+		content: '';
+		position: absolute;
+		background: var(--resizer-color, #888);
+		opacity: 0.5;
 	}
+	.resizer[data-dir='row']::before {
+		left: 50%;
+		top: 0;
+		width: 1px;
+		height: 100%;
+		transform: translateX(-50%);
+	}
+
+	.resizer[data-dir='column']::before {
+		top: 50%;
+		left: 0;
+		height: 1px;
+		width: 100%;
+		transform: translateY(-50%);
+	} */
 </style>

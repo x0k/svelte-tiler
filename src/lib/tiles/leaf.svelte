@@ -11,7 +11,7 @@
 		}
 	}
 
-	const [getContext, setContext] = createContext<Record<string, Snippet>>();
+	const [getContext, setContext] = createContext<Record<string, Snippet<[Tiles['leaf']]>>>();
 
 	export function setupLeafs<R extends Record<string, Snippet>>(leafs: R) {
 		setContext(leafs);
@@ -29,4 +29,4 @@
 	const { tile }: TileProps<'leaf'> = $props();
 </script>
 
-{@render ctx[tile.name]()}
+{@render ctx[tile.name](tile)}

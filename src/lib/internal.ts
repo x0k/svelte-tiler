@@ -1,1 +1,1 @@
-export const TILER_NODE_SNIPPETS = Symbol('tiler-node-snippets');
+export const TILER_COMPONENTS = Symbol('tiler-components')
