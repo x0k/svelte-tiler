@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { Snippet } from 'svelte';
+	import { on } from 'svelte/events';
 
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 
@@ -51,19 +52,70 @@
 </script>
 
 <script lang="ts">
-	const { tile }: { tile: Tiles['split'] } = $props();
+	const { tile = $bindable() }: { tile: Tiles['split'] } = $props();
 
 	const ctx = getTilerContext();
+
+	const isRow = $derived(tile.direction === 'row');
+
+	let splitEl: HTMLDivElement;
 </script>
 
-<div class="split" data-dir={tile.direction}>
+<div bind:this={splitEl} class="split" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const Component = getTileComponent(ctx, t)}
 		<div class="item" style="--grow: {tile.weights[i]}">
 			{#if i > 0}
-				<div class="resizer"></div>
+				<div
+					class="resizer"
+					{@attach (n) => {
+						let startPos = 0;
+						let startLeftWeight = 0;
+						let startRightWeight = 0;
+						let containerSize = 0;
+						let pairSizePx = 0;
+						let pairTotalWeight = 0;
+
+						return on(n, 'pointerdown', (e) => {
+							n.setPointerCapture(e.pointerId);
+
+							startPos = isRow ? e.clientX : e.clientY;
+							startLeftWeight = tile.weights[i - 1];
+							startRightWeight = tile.weights[i];
+							pairTotalWeight = startLeftWeight + startRightWeight;
+
+							containerSize = isRow ? splitEl.clientWidth : splitEl.clientHeight;
+							const allWeight = tile.weights.reduce((s, p) => s + p, 0);
+							pairSizePx = (pairTotalWeight / allWeight) * containerSize;
+
+							const onMove = (e: PointerEvent) => {
+								const current = isRow ? e.clientX : e.clientY;
+								const deltaPx = current - startPos;
+
+								const deltaWeight = (deltaPx / pairSizePx) * pairTotalWeight;
+
+								const nextLeft = startLeftWeight + deltaWeight;
+								const nextRight = startRightWeight - deltaWeight;
+
+								if (nextLeft <= 0.01 || nextRight <= 0.01) return;
+
+								tile.weights[i - 1] = nextLeft;
+								tile.weights[i] = nextRight;
+							};
+
+							const onUp = () => {
+								n.releasePointerCapture(e.pointerId);
+								window.removeEventListener('pointermove', onMove);
+								window.removeEventListener('pointerup', onUp);
+							};
+
+							window.addEventListener('pointermove', onMove);
+							window.addEventListener('pointerup', onUp);
+						});
+					}}
+				></div>
 			{/if}
-			<Component tile={t as never} />
+			<Component bind:tile={tile.children![i] as never} />
 		</div>
 	{/each}
 </div>
@@ -75,7 +127,7 @@
 
 		.item {
 			position: relative;
-			flex: var(--grow) 0 auto;
+			flex: var(--grow) 1 auto;
 		}
 
 		.resizer {
@@ -89,39 +141,4 @@
 			flex-direction: column;
 		}
 	}
-
-	/* .resizer[data-dir='row'] {
-		cursor: col-resize;
-		width: var(--size);
-		height: 100%;
-		left: calc(-1 * var(--size) / 2);
-	}
-
-	.resizer[data-dir='column'] {
-		cursor: row-resize;
-		height: var(--size);
-		width: 100%;
-		top: calc(-1 * var(--size) / 2);
-	}
-	.resizer::before {
-		content: '';
-		position: absolute;
-		background: var(--resizer-color, #888);
-		opacity: 0.5;
-	}
-	.resizer[data-dir='row']::before {
-		left: 50%;
-		top: 0;
-		width: 1px;
-		height: 100%;
-		transform: translateX(-50%);
-	}
-
-	.resizer[data-dir='column']::before {
-		top: 50%;
-		left: 0;
-		height: 1px;
-		width: 100%;
-		transform: translateY(-50%);
-	} */
 </style>

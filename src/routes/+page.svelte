@@ -6,11 +6,11 @@
 	const leaf = setupLeafs({
 		foo
 	});
-	const tile = createRow(leaf('foo'), createColumn(leaf('foo'), leaf('foo')));
+	let tile = $state(createRow(leaf('foo'), createColumn(leaf('foo'), leaf('foo'))));
 </script>
 
 <div class="tiler h-screen w-full">
-	<Tiler {tile} components={{ split: Split, leaf: Leaf }} />
+	<Tiler bind:tile components={{ split: Split, leaf: Leaf }} />
 </div>
 
 {#snippet foo()}

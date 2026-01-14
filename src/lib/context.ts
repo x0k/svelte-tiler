@@ -3,7 +3,7 @@ import { createContext, type Component } from 'svelte';
 import type { Tile, TileProps, TileType } from './tile.js';
 import { TILER_COMPONENTS } from './internal.js';
 
-export type TileComponents = { [T in TileType]: Component<TileProps<T>> };
+export type TileComponents = { [T in TileType]: Component<TileProps<T>, {}, 'tile'> };
 
 export interface TilerContext {
 	[TILER_COMPONENTS]: TileComponents;

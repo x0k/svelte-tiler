@@ -26,7 +26,7 @@
 <script lang="ts">
 	const ctx = getContext();
 
-	const { tile }: TileProps<'leaf'> = $props();
+	let { tile = $bindable() }: TileProps<'leaf'> = $props();
 </script>
 
 {@render ctx[tile.name](tile)}
