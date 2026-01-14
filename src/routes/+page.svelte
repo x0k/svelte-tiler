@@ -1,3 +1,18 @@
-<h1>Welcome to your library project</h1>
-<p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	import { createRow } from '$lib/tiles/split.svelte';
+	import { setupLeafs } from '$lib/tiles/leaf.svelte';
+	import Tiler from '$lib/tiler.svelte';
+
+	const leaf = setupLeafs({
+		foo
+	});
+	const tile = createRow(leaf('foo'), leaf('foo'));
+</script>
+
+<div>
+	<Tiler {tile} />
+</div>
+
+{#snippet foo()}
+	<p>Foo</p>
+{/snippet}
