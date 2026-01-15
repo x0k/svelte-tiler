@@ -15,7 +15,7 @@
 					['foo', leaf('foo')],
 					['bar', leaf('bar')],
 					['baz', leaf('foo')]
-				]
+				],
 			})
 		)
 	);

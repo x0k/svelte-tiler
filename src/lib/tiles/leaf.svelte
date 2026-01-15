@@ -13,9 +13,9 @@
 
 	const [getContext, setContext] = createContext<Record<string, Snippet<[Tiles['leaf']]>>>();
 
-	export function setupLeafs<R extends Record<string, Snippet>>(leafs: R) {
+	export function setupLeafs<N extends string>(leafs: Record<N, Snippet>) {
 		setContext(leafs);
-		return (name: keyof R & string): Tiles['leaf'] => ({
+		return (name: N): Tiles['leaf'] => ({
 			id: crypto.randomUUID(),
 			type: 'leaf',
 			name

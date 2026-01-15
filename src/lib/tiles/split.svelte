@@ -1,8 +1,9 @@
 <script lang="ts" module>
-	import type { Snippet } from 'svelte';
-	import { on } from 'svelte/events';
+	import { getContext, setContext, type Snippet } from 'svelte';
 
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
+	import { onDragStart } from '$lib/dnd.js';
+	import { constant } from '$lib/function.js';
 
 	import type { Tile, Tiles } from '../tile.js';
 
@@ -14,28 +15,29 @@
 				weights: number[];
 				direction: Direction;
 				minWeight: number;
+				resizer?: string;
 			};
 		}
 	}
 
-	export interface SplitOptions {
+	export interface SplitOptions<R extends string> {
 		children: Tile[];
 		direction?: Direction;
 		weights?: number[];
 		minWeight?: number;
-		render?: Snippet<[Tiles['split']]>;
+		resizer?: R;
 	}
 
-	const one = () => 1;
-
-	export function createSplit(options: SplitOptions): Tiles['split'] {
+	export function createSplit<R extends string>(options: SplitOptions<R>): Tiles['split'] {
+		const minWeight = options.minWeight ?? 10;
 		return {
 			id: crypto.randomUUID(),
 			type: 'split',
 			children: options.children,
-			minWeight: options.minWeight ?? 0.1,
+			minWeight,
 			direction: options.direction ?? 'row',
-			weights: options.weights ?? options.children.map(one)
+			weights: options.weights ?? options.children.map(constant(minWeight * 10)),
+			resizer: options.resizer
 		};
 	}
 
@@ -52,12 +54,24 @@
 			children
 		});
 	}
+
+	const SPLIT_CONTEXT_KEY = Symbol('split-context-key');
+
+	type SplitContext<R extends string = string> = Record<R, Snippet<[index: number]>>;
+
+	export function setupSplit<R extends string>(ctx: SplitContext<R>) {
+		setContext(SPLIT_CONTEXT_KEY, ctx);
+		return createSplit<R>;
+	}
 </script>
 
 <script lang="ts">
 	const { tile = $bindable() }: { tile: Tiles['split'] } = $props();
 
 	const ctx = getTilerContext();
+	const splitCtx = getContext<SplitContext | undefined>(SPLIT_CONTEXT_KEY);
+
+	const resizer = $derived((tile.resizer !== undefined && splitCtx?.[tile.resizer]) || undefined);
 
 	const isRow = $derived(tile.direction === 'row');
 
@@ -71,18 +85,15 @@
 			{#if i > 0}
 				<div
 					class="resizer"
-					{@attach (n) =>
-						on(n, 'pointerdown', (e) => {
-							n.setPointerCapture(e.pointerId);
+					{@attach onDragStart((e) => {
+						const containerSize = isRow ? splitEl.clientWidth : splitEl.clientHeight;
+						const totalWeight = tile.weights.reduce((s, p) => s + p, 0);
+						const minW = tile.minWeight;
+						const l = tile.weights.length;
 
-							const containerSize = isRow ? splitEl.clientWidth : splitEl.clientHeight;
-							const totalWeight = tile.weights.reduce((s, p) => s + p, 0);
-							const minW = tile.minWeight;
-							const l = tile.weights.length;
-
-							let previousPos = isRow ? e.clientX : e.clientY;
-
-							const onMove = (e: PointerEvent) => {
+						let previousPos = isRow ? e.clientX : e.clientY;
+						return {
+							onMove: (e) => {
 								const currentPos = isRow ? e.clientX : e.clientY;
 								let dPx = currentPos - previousPos;
 								if (dPx === 0) {
@@ -116,18 +127,12 @@
 									tile.weights[i - 1] += dw - toShift;
 								}
 								previousPos = currentPos;
-							};
-
-							const onUp = () => {
-								n.releasePointerCapture(e.pointerId);
-								window.removeEventListener('pointermove', onMove);
-								window.removeEventListener('pointerup', onUp);
-							};
-
-							window.addEventListener('pointermove', onMove);
-							window.addEventListener('pointerup', onUp);
-						})}
-				></div>
+							}
+						};
+					})}
+				>
+					{@render resizer?.(i - 1)}
+				</div>
 			{/if}
 			<Component bind:tile={tile.children![i] as never} />
 		</div>
