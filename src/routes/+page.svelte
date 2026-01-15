@@ -1,28 +1,36 @@
 <script lang="ts">
 	import Split, { createColumn, createRow } from '$lib/tiles/split.svelte';
 	import Leaf, { setupLeafs } from '$lib/tiles/leaf.svelte';
+	import Tabs, { createTabs } from '$lib/tiles/tabs.svelte';
 	import Tiler from '$lib/tiler.svelte';
 
 	const leaf = setupLeafs({
-		foo
+		foo,
+		bar
 	});
 	let tile = $state(
 		createRow(
-			leaf('foo'),
-			leaf('foo'),
-			leaf('foo'),
-			leaf('foo'),
-			createColumn(leaf('foo'), leaf('foo'), leaf('foo'), leaf('foo'))
+			createTabs({
+				tabs: [
+					['foo', leaf('foo')],
+					['bar', leaf('bar')],
+					['baz', leaf('foo')]
+				]
+			})
 		)
 	);
 </script>
 
 <div class="tiler h-screen w-full">
-	<Tiler bind:tile components={{ split: Split, leaf: Leaf }} />
+	<Tiler bind:tile components={{ split: Split, leaf: Leaf, tabs: Tabs }} />
 </div>
 
 {#snippet foo()}
 	<p>Foo</p>
+{/snippet}
+
+{#snippet bar()}
+	<p>Bar</p>
 {/snippet}
 
 <style>
@@ -85,6 +93,25 @@
 						}
 					}
 				}
+			}
+		}
+		.tabs {
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			> .tab-bar {
+				display: flex;
+				flex-direction: row;
+				> .tab-header {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					padding: 0.4rem 0.8rem;
+				}
+			}
+			> .tab-content {
+				flex-grow: 1;
 			}
 		}
 	}
