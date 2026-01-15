@@ -6,7 +6,15 @@
 	const leaf = setupLeafs({
 		foo
 	});
-	let tile = $state(createRow(leaf('foo'), createColumn(leaf('foo'), leaf('foo'))));
+	let tile = $state(
+		createRow(
+			leaf('foo'),
+			leaf('foo'),
+			leaf('foo'),
+			leaf('foo'),
+			createColumn(leaf('foo'), leaf('foo'), leaf('foo'), leaf('foo'))
+		)
+	);
 </script>
 
 <div class="tiler h-screen w-full">

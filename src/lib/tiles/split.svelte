@@ -13,6 +13,7 @@
 			split: {
 				weights: number[];
 				direction: Direction;
+				minWeight: number;
 			};
 		}
 	}
@@ -21,6 +22,7 @@
 		children: Tile[];
 		direction?: Direction;
 		weights?: number[];
+		minWeight?: number;
 		render?: Snippet<[Tiles['split']]>;
 	}
 
@@ -31,6 +33,7 @@
 			id: crypto.randomUUID(),
 			type: 'split',
 			children: options.children,
+			minWeight: options.minWeight ?? 0.1,
 			direction: options.direction ?? 'row',
 			weights: options.weights ?? options.children.map(one)
 		};
@@ -68,39 +71,51 @@
 			{#if i > 0}
 				<div
 					class="resizer"
-					{@attach (n) => {
-						let startPos = 0;
-						let startLeftWeight = 0;
-						let startRightWeight = 0;
-						let containerSize = 0;
-						let pairSizePx = 0;
-						let pairTotalWeight = 0;
-
-						return on(n, 'pointerdown', (e) => {
+					{@attach (n) =>
+						on(n, 'pointerdown', (e) => {
 							n.setPointerCapture(e.pointerId);
 
-							startPos = isRow ? e.clientX : e.clientY;
-							startLeftWeight = tile.weights[i - 1];
-							startRightWeight = tile.weights[i];
-							pairTotalWeight = startLeftWeight + startRightWeight;
+							const containerSize = isRow ? splitEl.clientWidth : splitEl.clientHeight;
+							const totalWeight = tile.weights.reduce((s, p) => s + p, 0);
+							const minW = tile.minWeight;
+							const l = tile.weights.length;
 
-							containerSize = isRow ? splitEl.clientWidth : splitEl.clientHeight;
-							const allWeight = tile.weights.reduce((s, p) => s + p, 0);
-							pairSizePx = (pairTotalWeight / allWeight) * containerSize;
+							let previousPos = isRow ? e.clientX : e.clientY;
 
 							const onMove = (e: PointerEvent) => {
-								const current = isRow ? e.clientX : e.clientY;
-								const deltaPx = current - startPos;
-
-								const deltaWeight = (deltaPx / pairSizePx) * pairTotalWeight;
-
-								const nextLeft = startLeftWeight + deltaWeight;
-								const nextRight = startRightWeight - deltaWeight;
-
-								if (nextLeft <= 0.01 || nextRight <= 0.01) return;
-
-								tile.weights[i - 1] = nextLeft;
-								tile.weights[i] = nextRight;
+								const currentPos = isRow ? e.clientX : e.clientY;
+								let dPx = currentPos - previousPos;
+								if (dPx === 0) {
+									return;
+								}
+								const dw = Math.abs((dPx / containerSize) * totalWeight);
+								let toShift = dw;
+								if (dPx < 0) {
+									let j = i - 1;
+									while (j >= 0 && toShift > 0) {
+										const w = tile.weights[j];
+										if (w > minW) {
+											const toSub = w > toShift ? toShift : w - minW;
+											tile.weights[j] -= toSub;
+											toShift -= toSub;
+										}
+										j--;
+									}
+									tile.weights[i] += dw - toShift;
+								} else {
+									let j = i;
+									while (j < l && toShift > 0) {
+										const w = tile.weights[j];
+										if (w > minW) {
+											const toSub = w > toShift ? toShift : w - minW;
+											tile.weights[j] -= toSub;
+											toShift -= toSub;
+										}
+										j++;
+									}
+									tile.weights[i - 1] += dw - toShift;
+								}
+								previousPos = currentPos;
 							};
 
 							const onUp = () => {
@@ -111,8 +126,7 @@
 
 							window.addEventListener('pointermove', onMove);
 							window.addEventListener('pointerup', onUp);
-						});
-					}}
+						})}
 				></div>
 			{/if}
 			<Component bind:tile={tile.children![i] as never} />
