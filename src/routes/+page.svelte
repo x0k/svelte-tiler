@@ -1,28 +1,38 @@
 <script lang="ts">
+	import type { TilerComponents } from '$lib/context.js';
 	import Split, { createColumn, createRow } from '$lib/tiles/split.svelte';
 	import Leaf, { setupLeafs } from '$lib/tiles/leaf.svelte';
 	import Tabs, { createTabs } from '$lib/tiles/tabs.svelte';
 	import Tiler from '$lib/tiler.svelte';
 
+	const components: TilerComponents = { split: Split, leaf: Leaf, tabs: Tabs };
+
 	const leaf = setupLeafs({
 		foo,
-		bar
+		bar,
+		baz
 	});
-	let tile = $state(
+	let split = $state(createRow(leaf('foo'), leaf('bar'), createColumn(leaf('foo'), leaf('bar'))));
+	let tabs = $state(
 		createRow(
 			createTabs({
 				tabs: [
 					['foo', leaf('foo')],
 					['bar', leaf('bar')],
-					['baz', leaf('foo')]
-				],
+					['baz', leaf('baz')]
+				]
 			})
 		)
 	);
 </script>
 
-<div class="tiler h-screen w-full">
-	<Tiler bind:tile components={{ split: Split, leaf: Leaf, tabs: Tabs }} />
+<div class="mx-auto flex w-full max-w-200 flex-col gap-4 p-4">
+	<div class="tiler h-100 rounded-md border">
+		<Tiler bind:tile={split} {components} />
+	</div>
+	<div class="tiler h-100 rounded-md border">
+		<Tiler bind:tile={tabs} {components} />
+	</div>
 </div>
 
 {#snippet foo()}
@@ -31,6 +41,10 @@
 
 {#snippet bar()}
 	<p>Bar</p>
+{/snippet}
+
+{#snippet baz()}
+	<p>Baz</p>
 {/snippet}
 
 <style>

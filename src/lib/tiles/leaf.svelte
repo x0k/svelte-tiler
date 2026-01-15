@@ -18,7 +18,8 @@
 		return (name: N): Tiles['leaf'] => ({
 			id: crypto.randomUUID(),
 			type: 'leaf',
-			name
+			name,
+			children: []
 		});
 	}
 </script>

@@ -1,7 +1,7 @@
 export interface TileBase<T extends TileType> {
 	id: string;
 	type: T;
-	children?: Tile[];
+	children: Tile[];
 }
 
 export interface TileRegistry {}

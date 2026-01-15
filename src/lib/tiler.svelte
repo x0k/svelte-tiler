@@ -3,12 +3,12 @@
 	import {
 		getTileComponent,
 		setTilerContext,
-		type TileComponents,
+		type TilerComponents,
 		type TilerContext
 	} from './context.js';
 	import type { Tile } from './tile.js';
 
-	let { tile = $bindable(), components }: { tile: Tile; components: TileComponents } = $props();
+	let { tile = $bindable(), components }: { tile: Tile; components: TilerComponents } = $props();
 
 	const ctx: TilerContext = {
 		get [TILER_COMPONENTS]() {

@@ -70,12 +70,12 @@
 	let draggedId = $state.raw<string | undefined>();
 
 	const selectedTile = $derived(
-		tile.children![tile.selectedTab] satisfies Tile as Tile | undefined
+		tile.children[tile.selectedTab] satisfies Tile as Tile | undefined
 	);
 	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
 
 	function reorderTabs(from: number, to: number) {
-		const tabs = tile.children!;
+		const tabs = tile.children;
 		const titles = tile.titles;
 		const [moved] = tabs.splice(from, 1);
 		const [movedTitle] = titles.splice(from, 1);
@@ -131,6 +131,7 @@
 				onkeydown={(e) => e.code === 'Enter' && (tile.selectedTab = i)}
 				{@attach onDragStart(handleDragStart(t.id, i))}
 				data-dragged={draggedId === t.id}
+				data-selected={tile.selectedTab === i}
 			>
 				{@render tabHeader(tile, i)}
 			</div>
@@ -138,7 +139,7 @@
 	</div>
 	<div class="tab-content">
 		{#if TileComponent}
-			<TileComponent bind:tile={tile.children![tile.selectedTab] as never} />
+			<TileComponent bind:tile={tile.children[tile.selectedTab] as never} />
 		{:else}
 			{@render empty?.(tile)}
 		{/if}

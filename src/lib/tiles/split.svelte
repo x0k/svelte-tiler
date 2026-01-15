@@ -57,7 +57,9 @@
 
 	const SPLIT_CONTEXT_KEY = Symbol('split-context-key');
 
-	type SplitContext<R extends string = string> = Record<R, Snippet<[index: number]>>;
+	type SplitContext<R extends string = string> = {
+		resizer: Record<R, Snippet<[Tiles['split'], number]>>;
+	};
 
 	export function setupSplit<R extends string>(ctx: SplitContext<R>) {
 		setContext(SPLIT_CONTEXT_KEY, ctx);
@@ -71,7 +73,9 @@
 	const ctx = getTilerContext();
 	const splitCtx = getContext<SplitContext | undefined>(SPLIT_CONTEXT_KEY);
 
-	const resizer = $derived((tile.resizer !== undefined && splitCtx?.[tile.resizer]) || undefined);
+	const resizer = $derived(
+		(tile.resizer !== undefined && splitCtx?.resizer[tile.resizer]) || undefined
+	);
 
 	const isRow = $derived(tile.direction === 'row');
 
@@ -131,10 +135,10 @@
 						};
 					})}
 				>
-					{@render resizer?.(i - 1)}
+					{@render resizer?.(tile, i - 1)}
 				</div>
 			{/if}
-			<Component bind:tile={tile.children![i] as never} />
+			<Component bind:tile={tile.children[i] as never} />
 		</div>
 	{/each}
 </div>
