@@ -1,11 +1,11 @@
 <script lang="ts" module>
 	import { getContext, setContext, type Snippet } from 'svelte';
 
+	import { onDragStart } from '$lib/shared/dnd.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
-	import { onDragStart } from '$lib/dnd.js';
-	import { constant } from '$lib/function.js';
 
 	import type { Tile, Tiles } from '../tile.js';
+	import { createAttachmentKey, type Attachment } from 'svelte/attachments';
 
 	export type Direction = 'row' | 'column';
 
@@ -33,15 +33,19 @@
 		gapPx?: number;
 	}
 
+	const one = () => 1;
+
 	export function createSplit<R extends string>(options: SplitOptions<R>): Tiles['split'] {
-		const minWeight = options.minWeight ?? 10;
+		const weights = options.weights ?? options.children.map(one);
+		const totalWeight = weights.reduce((a, b) => a + b, 0);
+		const minWeight = options.minWeight ?? (totalWeight / weights.length) * 0.2;
 		return {
 			id: crypto.randomUUID(),
 			type: 'split',
 			children: options.children,
+			weights,
 			minWeight,
 			direction: options.direction ?? 'row',
-			weights: options.weights ?? options.children.map(constant(minWeight * 10)),
 			resizer: options.resizer,
 			gapPx: options.gapPx ?? 1
 		};
@@ -63,8 +67,10 @@
 
 	const SPLIT_CONTEXT_KEY = Symbol('split-context-key');
 
+	export type ResizerProps = { [key: symbol]: Attachment<HTMLElement> };
+
 	type SplitContext<R extends string = string> = {
-		resizer: Record<R, Snippet<[Tiles['split'], number]>>;
+		resizer: Record<R, Snippet<[ResizerProps, Tiles['split'], number]>>;
 	};
 
 	export function setupSplit<R extends string>(ctx: SplitContext<R>) {
@@ -80,98 +86,104 @@
 	const splitCtx = getContext<SplitContext | undefined>(SPLIT_CONTEXT_KEY);
 
 	const resizer = $derived(
-		(tile.resizer !== undefined && splitCtx?.resizer[tile.resizer]) || undefined
+		(tile.resizer !== undefined && splitCtx?.resizer[tile.resizer]) || defaultResizer
 	);
 
-	const isRow = $derived(tile.direction === 'row');
-
 	let splitEl: HTMLDivElement;
+
+	const attachmentKey = createAttachmentKey();
 </script>
+
+{#snippet defaultResizer(props: ResizerProps)}
+	<div class="resizer" {...props}></div>
+{/snippet}
 
 <div bind:this={splitEl} class="split" style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const Component = getTileComponent(ctx, t)}
+		{@const resizerProps = {
+			[attachmentKey]: onDragStart((e) => {
+				const resizerEl = e.currentTarget;
+				const l = tile.weights.length;
+				const isRow = tile.direction === 'row';
+				const containerSize =
+					(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
+				const totalWeight = tile.weights.reduce((a, b) => a + b);
+				const minWeight = tile.minWeight;
+
+				let lastDir = 0;
+				let startPos = isRow ? e.pageX : e.pageY;
+				let lastWeights = $state.snapshot(tile.weights);
+				let previousPos = startPos;
+				let remaining = 0;
+				const shrink = (j: number) => {
+					const currentWeight = lastWeights[j];
+					if (currentWeight > minWeight) {
+						const available = currentWeight - minWeight;
+						if (available > remaining) {
+							tile.weights[j] = currentWeight - remaining;
+							remaining = 0;
+						} else {
+							tile.weights[j] = minWeight;
+							remaining -= available;
+						}
+					}
+				};
+				return {
+					onMove(e) {
+						const currentPos = isRow ? e.pageX : e.pageY;
+						let currentDir = Math.sign(currentPos - previousPos);
+						if (currentDir === 0) {
+							return;
+						}
+						const resizerRect = resizerEl.getBoundingClientRect();
+						if (
+							isRow
+								? currentDir < 0
+									? currentPos < resizerRect.right
+									: currentPos > resizerRect.left
+								: currentDir < 0
+									? currentPos < resizerRect.bottom
+									: currentPos > resizerRect.top
+						) {
+							if (currentDir !== lastDir) {
+								startPos = previousPos;
+								lastWeights = $state.snapshot(tile.weights);
+								lastDir = currentDir;
+							}
+							const deltaWeight = Math.abs(((currentPos - startPos) * totalWeight) / containerSize);
+							if (deltaWeight > 0) {
+								remaining = deltaWeight;
+								if (currentDir < 0) {
+									let j = i - 1;
+									while (j >= 0 && remaining > 0) {
+										shrink(j);
+										j--;
+									}
+									tile.weights[i] = lastWeights[i] + deltaWeight - remaining;
+								} else {
+									let j = i;
+									while (j < l && remaining > 0) {
+										shrink(j);
+										j++;
+									}
+									tile.weights[i - 1] = lastWeights[i - 1] + deltaWeight - remaining;
+								}
+							}
+						}
+						previousPos = currentPos;
+					},
+					onUp() {
+						for (let j = 0; j < tile.weights.length; j++) {
+							tile.weights[j] = Number.parseFloat(tile.weights[j].toFixed(2));
+						}
+					}
+				};
+			})
+		}}
 		<div class="item" style="--grow: {tile.weights[i]}">
 			{#if i > 0}
-				<div
-					class="resizer"
-					{@attach onDragStart((e) => {
-						const resizerEl = e.currentTarget;
-						const l = tile.weights.length;
-						const containerSize =
-							(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
-						const totalWeight = tile.weights.reduce((s, p) => s + p, 0);
-						const minWeight = tile.minWeight;
-
-						let lastDir = 0;
-						let startPos = isRow ? e.pageX : e.pageY;
-						let lastSnap = $state.snapshot(tile.weights);
-						let previousPos = startPos;
-						let toShrink = 0;
-						const shrink = (j: number) => {
-							const currentWeight = lastSnap[j];
-							if (currentWeight > minWeight) {
-								const shrinkableWeight = currentWeight - minWeight;
-								if (shrinkableWeight > toShrink) {
-									tile.weights[j] = currentWeight - toShrink;
-									toShrink = 0;
-								} else {
-									tile.weights[j] = minWeight;
-									toShrink = toShrink - shrinkableWeight;
-								}
-							}
-						};
-						return {
-							onMove: (e) => {
-								const currentPos = isRow ? e.pageX : e.pageY;
-								let currentDir = Math.sign(currentPos - previousPos);
-								if (currentDir === 0) {
-									return;
-								}
-								const resizerRect = resizerEl.getBoundingClientRect();
-								if (
-									isRow
-										? currentDir < 0
-											? currentPos < resizerRect.right
-											: currentPos > resizerRect.left
-										: currentDir < 0
-											? currentPos < resizerRect.bottom
-											: currentPos > resizerRect.top
-								) {
-									if (currentDir !== lastDir) {
-										startPos = previousPos;
-										lastSnap = $state.snapshot(tile.weights);
-										lastDir = currentDir;
-									}
-									const deltaWeight = Math.abs(
-										Math.round(((currentPos - startPos) / containerSize) * totalWeight * 1.1)
-									);
-									if (deltaWeight > 0) {
-										toShrink = deltaWeight;
-										if (currentDir < 0) {
-											let j = i - 1;
-											while (j >= 0 && toShrink > 0) {
-												shrink(j);
-												j--;
-											}
-											tile.weights[i] = lastSnap[i] + deltaWeight - toShrink;
-										} else {
-											let j = i;
-											while (j < l && toShrink > 0) {
-												shrink(j);
-												j++;
-											}
-											tile.weights[i - 1] = lastSnap[i - 1] + deltaWeight - toShrink;
-										}
-									}
-								}
-								previousPos = currentPos;
-							}
-						};
-					})}
-				>
-					{@render resizer?.(tile, i - 1)}
-				</div>
+				{@render resizer(resizerProps, tile, i)}
 			{/if}
 			<Component bind:tile={tile.children[i] as never} />
 		</div>
@@ -186,7 +198,7 @@
 
 		.item {
 			position: relative;
-			flex: var(--grow) 1 auto;
+			flex: var(--grow) 1 0;
 		}
 
 		.resizer {

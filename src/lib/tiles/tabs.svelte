@@ -1,9 +1,9 @@
 <script lang="ts" module>
 	import { getContext, setContext, type Snippet } from 'svelte';
 
-	import type { Tile, Tiles } from '$lib/tile.js';
+	import { onDragStart, type DragStartHandlersFactory } from '$lib/shared/dnd.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
-	import { onDragStart, type DragStartHandlersFactory } from '$lib/dnd.js';
+	import type { Tile, Tiles } from '$lib/tile.js';
 
 	declare module '../tile.js' {
 		interface TileRegistry {
