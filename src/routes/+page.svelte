@@ -54,8 +54,6 @@
 			--resizer-hit-size: 12px;
 			--resizer-color: #888;
 
-			gap: var(--resizer-line-size);
-
 			width: 100%;
 			height: 100%;
 			.resizer {

@@ -16,16 +16,21 @@
 				direction: Direction;
 				minWeight: number;
 				resizer?: string;
+				gapPx: number;
 			};
 		}
 	}
 
 	export interface SplitOptions<R extends string> {
 		children: Tile[];
-		direction?: Direction;
 		weights?: number[];
-		minWeight?: number;
 		resizer?: R;
+		/** @default "row" */
+		direction?: Direction;
+		/** @default 10 */
+		minWeight?: number;
+		/** @default 1 */
+		gapPx?: number;
 	}
 
 	export function createSplit<R extends string>(options: SplitOptions<R>): Tiles['split'] {
@@ -37,7 +42,8 @@
 			minWeight,
 			direction: options.direction ?? 'row',
 			weights: options.weights ?? options.children.map(constant(minWeight * 10)),
-			resizer: options.resizer
+			resizer: options.resizer,
+			gapPx: options.gapPx ?? 1
 		};
 	}
 
@@ -82,7 +88,7 @@
 	let splitEl: HTMLDivElement;
 </script>
 
-<div bind:this={splitEl} class="split" data-dir={tile.direction}>
+<div bind:this={splitEl} class="split" style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const Component = getTileComponent(ctx, t)}
 		<div class="item" style="--grow: {tile.weights[i]}">
@@ -90,45 +96,62 @@
 				<div
 					class="resizer"
 					{@attach onDragStart((e) => {
-						const containerSize = isRow ? splitEl.clientWidth : splitEl.clientHeight;
-						const totalWeight = tile.weights.reduce((s, p) => s + p, 0);
-						const minW = tile.minWeight;
 						const l = tile.weights.length;
+						const containerSize =
+							(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
+						const totalWeight = tile.weights.reduce((s, p) => s + p, 0);
+						const minWeight = tile.minWeight;
 
-						let previousPos = isRow ? e.clientX : e.clientY;
+						let lastDir = 0;
+						let startPos = isRow ? e.pageX : e.pageY;
+						let lastSnap = $state.snapshot(tile.weights);
+						let previousPos = startPos;
+						let toShrink = 0;
+						const shrink = (j: number) => {
+							const currentWeight = lastSnap[j];
+							if (currentWeight > minWeight) {
+								const shrinkableWeight = currentWeight - minWeight;
+								if (shrinkableWeight > toShrink) {
+									tile.weights[j] = currentWeight - toShrink;
+									toShrink = 0;
+								} else {
+									tile.weights[j] = minWeight;
+									toShrink = toShrink - shrinkableWeight;
+								}
+							}
+						};
 						return {
 							onMove: (e) => {
-								const currentPos = isRow ? e.clientX : e.clientY;
-								let dPx = currentPos - previousPos;
-								if (dPx === 0) {
+								const currentPos = isRow ? e.pageX : e.pageY;
+								let currentDir = Math.sign(currentPos - previousPos);
+								if (currentDir === 0) {
 									return;
 								}
-								const dw = Math.abs((dPx / containerSize) * totalWeight);
-								let toShift = dw;
-								if (dPx < 0) {
-									let j = i - 1;
-									while (j >= 0 && toShift > 0) {
-										const w = tile.weights[j];
-										if (w > minW) {
-											const toSub = w > toShift ? toShift : w - minW;
-											tile.weights[j] -= toSub;
-											toShift -= toSub;
+								if (currentDir !== lastDir) {
+									startPos = previousPos;
+									lastSnap = $state.snapshot(tile.weights);
+									lastDir = currentDir;
+								}
+								const deltaWeight = Math.abs(
+									Math.floor(((currentPos - startPos) / containerSize) * totalWeight)
+								);
+								if (deltaWeight > 0) {
+									toShrink = deltaWeight;
+									if (currentDir < 0) {
+										let j = i - 1;
+										while (j >= 0 && toShrink > 0) {
+											shrink(j);
+											j--;
 										}
-										j--;
-									}
-									tile.weights[i] += dw - toShift;
-								} else {
-									let j = i;
-									while (j < l && toShift > 0) {
-										const w = tile.weights[j];
-										if (w > minW) {
-											const toSub = w > toShift ? toShift : w - minW;
-											tile.weights[j] -= toSub;
-											toShift -= toSub;
+										tile.weights[i] = lastSnap[i] + deltaWeight - toShrink;
+									} else {
+										let j = i;
+										while (j < l && toShrink > 0) {
+											shrink(j);
+											j++;
 										}
-										j++;
+										tile.weights[i - 1] = lastSnap[i - 1] + deltaWeight - toShrink;
 									}
-									tile.weights[i - 1] += dw - toShift;
 								}
 								previousPos = currentPos;
 							}
@@ -147,6 +170,7 @@
 	.split {
 		display: flex;
 		overflow: hidden;
+		gap: var(--gap);
 
 		.item {
 			position: relative;
