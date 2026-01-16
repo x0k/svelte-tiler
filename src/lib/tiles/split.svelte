@@ -96,6 +96,7 @@
 				<div
 					class="resizer"
 					{@attach onDragStart((e) => {
+						const resizerEl = e.currentTarget;
 						const l = tile.weights.length;
 						const containerSize =
 							(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
@@ -127,30 +128,41 @@
 								if (currentDir === 0) {
 									return;
 								}
-								if (currentDir !== lastDir) {
-									startPos = previousPos;
-									lastSnap = $state.snapshot(tile.weights);
-									lastDir = currentDir;
-								}
-								const deltaWeight = Math.abs(
-									Math.floor(((currentPos - startPos) / containerSize) * totalWeight)
-								);
-								if (deltaWeight > 0) {
-									toShrink = deltaWeight;
-									if (currentDir < 0) {
-										let j = i - 1;
-										while (j >= 0 && toShrink > 0) {
-											shrink(j);
-											j--;
+								const resizerRect = resizerEl.getBoundingClientRect();
+								if (
+									isRow
+										? currentDir < 0
+											? currentPos < resizerRect.right
+											: currentPos > resizerRect.left
+										: currentDir < 0
+											? currentPos < resizerRect.bottom
+											: currentPos > resizerRect.top
+								) {
+									if (currentDir !== lastDir) {
+										startPos = previousPos;
+										lastSnap = $state.snapshot(tile.weights);
+										lastDir = currentDir;
+									}
+									const deltaWeight = Math.abs(
+										Math.round(((currentPos - startPos) / containerSize) * totalWeight * 1.1)
+									);
+									if (deltaWeight > 0) {
+										toShrink = deltaWeight;
+										if (currentDir < 0) {
+											let j = i - 1;
+											while (j >= 0 && toShrink > 0) {
+												shrink(j);
+												j--;
+											}
+											tile.weights[i] = lastSnap[i] + deltaWeight - toShrink;
+										} else {
+											let j = i;
+											while (j < l && toShrink > 0) {
+												shrink(j);
+												j++;
+											}
+											tile.weights[i - 1] = lastSnap[i - 1] + deltaWeight - toShrink;
 										}
-										tile.weights[i] = lastSnap[i] + deltaWeight - toShrink;
-									} else {
-										let j = i;
-										while (j < l && toShrink > 0) {
-											shrink(j);
-											j++;
-										}
-										tile.weights[i - 1] = lastSnap[i - 1] + deltaWeight - toShrink;
 									}
 								}
 								previousPos = currentPos;
