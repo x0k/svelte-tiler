@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { TilerComponents } from '$lib/context.js';
-	import Split, { createColumn, createRow } from '$lib/tiles/split.svelte';
+	import Split, { createColumn, createRow, createSplit } from '$lib/tiles/split.svelte';
 	import Leaf, { setupLeafs } from '$lib/tiles/leaf.svelte';
 	import Tabs, { createTabs } from '$lib/tiles/tabs.svelte';
 	import Tiler from '$lib/tiler.svelte';
@@ -12,7 +12,18 @@
 		bar,
 		baz
 	});
-	let split = $state(createRow(leaf('foo'), leaf('bar'), createColumn(leaf('foo'), leaf('bar'))));
+	let split = $state(
+		createSplit({
+			children: [leaf('foo'), leaf('bar'), createColumn(leaf('foo'), leaf('bar'))],
+			constraints: [
+				{},
+				{
+					maxWeight: 1
+				},
+				{}
+			]
+		})
+	);
 	let tabs = $state(
 		createRow(
 			createTabs({

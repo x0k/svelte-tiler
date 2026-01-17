@@ -1,20 +1,25 @@
 <script lang="ts" module>
 	import { getContext, setContext, type Snippet } from 'svelte';
+	import { createAttachmentKey, type Attachment } from 'svelte/attachments';
 
 	import { onDragStart } from '$lib/shared/dnd.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 
 	import type { Tile, Tiles } from '../tile.js';
-	import { createAttachmentKey, type Attachment } from 'svelte/attachments';
 
 	export type Direction = 'row' | 'column';
+
+	export interface TileConstraints {
+		weight: number;
+		minWeight: number;
+		maxWeight: number;
+	}
 
 	declare module '../tile.js' {
 		interface TileRegistry {
 			split: {
-				weights: number[];
+				constraints: TileConstraints[];
 				direction: Direction;
-				minWeight: number;
 				resizer?: string;
 				gapPx: number;
 			};
@@ -23,28 +28,29 @@
 
 	export interface SplitOptions<R extends string> {
 		children: Tile[];
-		weights?: number[];
+		constraints?: Partial<TileConstraints>[];
 		resizer?: R;
 		/** @default "row" */
 		direction?: Direction;
-		/** @default 10 */
-		minWeight?: number;
 		/** @default 1 */
 		gapPx?: number;
 	}
 
-	const one = () => 1;
+	const empty = (): Partial<TileConstraints> => ({});
 
 	export function createSplit<R extends string>(options: SplitOptions<R>): Tiles['split'] {
-		const weights = options.weights ?? options.children.map(one);
-		const totalWeight = weights.reduce((a, b) => a + b, 0);
-		const minWeight = options.minWeight ?? (totalWeight / weights.length) * 0.2;
+		const constraints: TileConstraints[] = (options.constraints ?? options.children.map(empty)).map(
+			({ weight = 1, minWeight = weight * 0.2, maxWeight = 0 }) => ({
+				weight,
+				minWeight,
+				maxWeight
+			})
+		);
 		return {
 			id: crypto.randomUUID(),
 			type: 'split',
 			children: options.children,
-			weights,
-			minWeight,
+			constraints,
 			direction: options.direction ?? 'row',
 			resizer: options.resizer,
 			gapPx: options.gapPx ?? 1
@@ -104,28 +110,54 @@
 		{@const resizerProps = {
 			[attachmentKey]: onDragStart((e) => {
 				const resizerEl = e.currentTarget;
-				const l = tile.weights.length;
+				const l = tile.constraints.length;
 				const isRow = tile.direction === 'row';
 				const containerSize =
 					(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
-				const totalWeight = tile.weights.reduce((a, b) => a + b);
-				const minWeight = tile.minWeight;
+				const totalWeight = tile.constraints.reduce((a, b) => a + b.weight, 0);
 
 				let lastDir = 0;
 				let startPos = isRow ? e.pageX : e.pageY;
-				let lastWeights = $state.snapshot(tile.weights);
+				let lastConstraints = $state.snapshot(tile.constraints);
 				let previousPos = startPos;
 				let remaining = 0;
-				const shrink = (j: number) => {
-					const currentWeight = lastWeights[j];
-					if (currentWeight > minWeight) {
-						const available = currentWeight - minWeight;
-						if (available > remaining) {
-							tile.weights[j] = currentWeight - remaining;
+				let currentDir = 0;
+				const expand = (j: number) => {
+					const constraints = lastConstraints[j];
+					const isUnrestricted = constraints.maxWeight === 0;
+					if (constraints.weight < constraints.maxWeight || isUnrestricted) {
+						const available = constraints.maxWeight - constraints.weight;
+						if (available > remaining || isUnrestricted) {
+							tile.constraints[j].weight = constraints.weight + remaining;
 							remaining = 0;
 						} else {
-							tile.weights[j] = minWeight;
+							tile.constraints[j].weight = constraints.maxWeight;
 							remaining -= available;
+						}
+					}
+				};
+				const shrink = (j: number) => {
+					const constraints = lastConstraints[j];
+					if (constraints.weight > constraints.minWeight) {
+						const available = constraints.weight - constraints.minWeight;
+						if (available > remaining) {
+							tile.constraints[j].weight = constraints.weight - remaining;
+							remaining = 0;
+						} else {
+							tile.constraints[j].weight = constraints.minWeight;
+							remaining -= available;
+						}
+					}
+				};
+				const adjustBy = (adjust: (index: number) => void) => {
+					let j = currentDir < 0 ? i - 1 : i;
+					if (currentDir < 0) {
+						while (j >= 0 && remaining > 0) {
+							adjust(j--);
+						}
+					} else {
+						while (j < l && remaining > 0) {
+							adjust(j++);
 						}
 					}
 				};
@@ -134,7 +166,7 @@
 				return {
 					onMove(e) {
 						const currentPos = isRow ? e.pageX : e.pageY;
-						let currentDir = Math.sign(currentPos - previousPos);
+						currentDir = Math.sign(currentPos - previousPos);
 						if (currentDir === 0) {
 							return;
 						}
@@ -150,26 +182,17 @@
 						) {
 							if (currentDir !== lastDir) {
 								startPos = previousPos;
-								lastWeights = $state.snapshot(tile.weights);
+								lastConstraints = $state.snapshot(tile.constraints);
 								lastDir = currentDir;
 							}
 							const deltaWeight = Math.abs(((currentPos - startPos) * totalWeight) / containerSize);
 							if (deltaWeight > 0) {
 								remaining = deltaWeight;
-								if (currentDir < 0) {
-									let j = i - 1;
-									while (j >= 0 && remaining > 0) {
-										shrink(j);
-										j--;
-									}
-									tile.weights[i] = lastWeights[i] + deltaWeight - remaining;
-								} else {
-									let j = i;
-									while (j < l && remaining > 0) {
-										shrink(j);
-										j++;
-									}
-									tile.weights[i - 1] = lastWeights[i - 1] + deltaWeight - remaining;
+								adjustBy(shrink);
+								remaining = deltaWeight - remaining;
+								if (remaining > 0) {
+									currentDir *= -1;
+									adjustBy(expand);
 								}
 							}
 						}
@@ -177,14 +200,15 @@
 					},
 					onStop() {
 						delete resizerEl.dataset.dragged;
-						for (let j = 0; j < tile.weights.length; j++) {
-							tile.weights[j] = Number.parseFloat(tile.weights[j].toFixed(2));
+						for (let j = 0; j < tile.constraints.length; j++) {
+							const c = tile.constraints[j];
+							c.weight = Number.parseFloat(c.weight.toFixed(2));
 						}
 					}
 				};
 			})
 		}}
-		<div class="item" style="--grow: {tile.weights[i]}">
+		<div class="item" style="--grow: {tile.constraints[i].weight}">
 			{#if i > 0}
 				{@render resizer(resizerProps, tile, i)}
 			{/if}
