@@ -1,6 +1,7 @@
 <script lang="ts" module>
 	import { createContext, type Snippet } from 'svelte';
 
+	import type { Registry } from '$lib/shared/registry.js';
 	import type { TileProps, Tiles } from '$lib/tile.js';
 
 	declare module '../tile.js' {
@@ -11,9 +12,11 @@
 		}
 	}
 
-	const [getContext, setContext] = createContext<Record<string, Snippet<[Tiles['leaf']]>>>();
+	type LeafContext<N extends string = string> = Registry<N, Snippet<[Tiles['leaf']]> | undefined>;
 
-	export function setupLeafs<N extends string>(leafs: Record<N, Snippet>) {
+	const [getContext, setContext] = createContext<LeafContext>();
+
+	export function setupLeafs<N extends string>(leafs: LeafContext<N>) {
 		setContext(leafs);
 		return (name: N): Tiles['leaf'] => ({
 			id: crypto.randomUUID(),
@@ -25,9 +28,9 @@
 </script>
 
 <script lang="ts">
-	const ctx = getContext();
+	const leafCtx = getContext();
 
 	let { tile = $bindable() }: TileProps<'leaf'> = $props();
 </script>
 
-{@render ctx[tile.name](tile)}
+{@render leafCtx.get(tile.name)?.(tile)}

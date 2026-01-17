@@ -2,6 +2,7 @@
 	import { getContext, setContext, type Snippet } from 'svelte';
 
 	import { onDragStart, type DragStartHandlersFactory } from '$lib/shared/dnd.js';
+	import type { Registry } from '$lib/shared/registry.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 	import type { Tile, Tiles } from '$lib/tile.js';
 
@@ -46,8 +47,8 @@
 	const TABS_CONTEXT_KEY = Symbol('tabs-context-key');
 
 	interface TabsContext<H extends string = string, E extends string = string> {
-		headers: Record<H, Snippet<[Tiles['tabs'], number]>>;
-		empty: Record<E, Snippet<[Tiles['tabs']]>>;
+		headers?: Registry<H, Snippet<[Tiles['tabs'], number]> | undefined>;
+		empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
 	}
 
 	export function setupTabs<H extends string, E extends string>(ctx: TabsContext<H, E>) {
@@ -63,9 +64,11 @@
 	const tabsCtx = getContext<TabsContext | undefined>(TABS_CONTEXT_KEY);
 
 	const tabHeader = $derived(
-		(tile.tabHeader !== undefined && tabsCtx?.headers[tile.tabHeader]) || defaultTabHeader
+		(tile.tabHeader !== undefined && tabsCtx?.headers?.get(tile.tabHeader)) || defaultTabHeader
 	);
-	const empty = $derived((tile.empty !== undefined && tabsCtx?.empty[tile.empty]) || undefined);
+	const empty = $derived(
+		(tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
+	);
 
 	let draggedId = $state.raw<string | undefined>();
 

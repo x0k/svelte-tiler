@@ -3,6 +3,7 @@
 	import { createAttachmentKey, type Attachment } from 'svelte/attachments';
 
 	import { onDragStart } from '$lib/shared/dnd.js';
+	import type { Registry } from '$lib/shared/registry.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 
 	import type { Tile, Tiles } from '../tile.js';
@@ -76,7 +77,7 @@
 	export type ResizerProps = { [key: symbol]: Attachment<HTMLElement> };
 
 	type SplitContext<R extends string = string> = {
-		resizer: Record<R, Snippet<[ResizerProps, Tiles['split'], number]>>;
+		resizer?: Registry<R, Snippet<[ResizerProps, Tiles['split'], number]> | undefined>;
 	};
 
 	export function setupSplit<R extends string>(ctx: SplitContext<R>) {
@@ -92,7 +93,7 @@
 	const splitCtx = getContext<SplitContext | undefined>(SPLIT_CONTEXT_KEY);
 
 	const resizer = $derived(
-		(tile.resizer !== undefined && splitCtx?.resizer[tile.resizer]) || defaultResizer
+		(tile.resizer !== undefined && splitCtx?.resizer?.get(tile.resizer)) || defaultResizer
 	);
 
 	let splitEl: HTMLDivElement;
@@ -124,15 +125,15 @@
 				let currentDir = 0;
 				const expand = (j: number) => {
 					const constraints = lastConstraints[j];
-					const isUnrestricted = constraints.maxWeight === 0;
-					if (constraints.weight < constraints.maxWeight || isUnrestricted) {
+					const isConstrained = constraints.maxWeight !== 0;
+					if (constraints.weight < constraints.maxWeight || !isConstrained) {
 						const available = constraints.maxWeight - constraints.weight;
-						if (available > remaining || isUnrestricted) {
-							tile.constraints[j].weight = constraints.weight + remaining;
-							remaining = 0;
-						} else {
+						if (available < remaining && isConstrained) {
 							tile.constraints[j].weight = constraints.maxWeight;
 							remaining -= available;
+						} else {
+							tile.constraints[j].weight = constraints.weight + remaining;
+							remaining = 0;
 						}
 					}
 				};
@@ -140,22 +141,23 @@
 					const constraints = lastConstraints[j];
 					if (constraints.weight > constraints.minWeight) {
 						const available = constraints.weight - constraints.minWeight;
-						if (available > remaining) {
-							tile.constraints[j].weight = constraints.weight - remaining;
-							remaining = 0;
-						} else {
+						if (available < remaining) {
 							tile.constraints[j].weight = constraints.minWeight;
 							remaining -= available;
+						} else {
+							tile.constraints[j].weight = constraints.weight - remaining;
+							remaining = 0;
 						}
 					}
 				};
 				const adjustBy = (adjust: (index: number) => void) => {
-					let j = currentDir < 0 ? i - 1 : i;
 					if (currentDir < 0) {
+						let j = i - 1;
 						while (j >= 0 && remaining > 0) {
 							adjust(j--);
 						}
 					} else {
+						let j = i;
 						while (j < l && remaining > 0) {
 							adjust(j++);
 						}

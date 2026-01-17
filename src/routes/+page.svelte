@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { fromConstant } from '$lib/shared/registry.js';
+	import type { Tiles } from '$lib/tile.js';
 	import type { TilerComponents } from '$lib/context.js';
 	import Split, { createColumn, createRow, createSplit } from '$lib/tiles/split.svelte';
 	import Leaf, { setupLeafs } from '$lib/tiles/leaf.svelte';
@@ -7,11 +9,7 @@
 
 	const components: TilerComponents = { split: Split, leaf: Leaf, tabs: Tabs };
 
-	const leaf = setupLeafs({
-		foo,
-		bar,
-		baz
-	});
+	const leaf = setupLeafs(fromConstant(test));
 	let split = $state(
 		createSplit({
 			children: [leaf('foo'), leaf('bar'), createColumn(leaf('foo'), leaf('bar'))],
@@ -46,16 +44,8 @@
 	</div>
 </div>
 
-{#snippet foo()}
-	<p>Foo</p>
-{/snippet}
-
-{#snippet bar()}
-	<p>Bar</p>
-{/snippet}
-
-{#snippet baz()}
-	<p>Baz</p>
+{#snippet test(tile: Tiles['leaf'])}
+	<p>{tile.name}</p>
 {/snippet}
 
 <style>

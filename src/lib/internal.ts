@@ -1,1 +1,1 @@
-export const TILER_COMPONENTS = Symbol('tiler-components')
+export const TILER_COMPONENTS = Symbol('tiler-components');
