@@ -129,6 +129,8 @@
 						}
 					}
 				};
+
+				resizerEl.dataset.dragged = 'true';
 				return {
 					onMove(e) {
 						const currentPos = isRow ? e.pageX : e.pageY;
@@ -173,7 +175,8 @@
 						}
 						previousPos = currentPos;
 					},
-					onUp() {
+					onStop() {
+						delete resizerEl.dataset.dragged;
 						for (let j = 0; j < tile.weights.length; j++) {
 							tile.weights[j] = Number.parseFloat(tile.weights[j].toFixed(2));
 						}

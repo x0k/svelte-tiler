@@ -69,9 +69,7 @@
 
 	let draggedId = $state.raw<string | undefined>();
 
-	const selectedTile = $derived(
-		tile.children[tile.selectedTab] satisfies Tile as Tile | undefined
-	);
+	const selectedTile = $derived(tile.children[tile.selectedTab] satisfies Tile as Tile | undefined);
 	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
 
 	function reorderTabs(from: number, to: number) {
@@ -98,7 +96,7 @@
 
 			let draggingTabIndex = index;
 			return {
-				onMove: (e) => {
+				onMove(e) {
 					const over = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
 					if (!over || !over.classList.contains('tab-header')) return;
 
@@ -108,7 +106,7 @@
 					reorderTabs(draggingTabIndex, overIndex);
 					draggingTabIndex = overIndex;
 				},
-				onUp: () => {
+				onStop() {
 					draggedId = undefined;
 				}
 			};
@@ -123,18 +121,16 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
-			<div
+			<button
 				class="tab-header"
 				role="tab"
-				tabindex="0"
 				onclick={() => (tile.selectedTab = i)}
-				onkeydown={(e) => e.code === 'Enter' && (tile.selectedTab = i)}
 				{@attach onDragStart(handleDragStart(t.id, i))}
 				data-dragged={draggedId === t.id}
 				data-selected={tile.selectedTab === i}
 			>
 				{@render tabHeader(tile, i)}
-			</div>
+			</button>
 		{/each}
 	</div>
 	<div class="tab-content">

@@ -1,28 +1,42 @@
 import type { Attachment } from 'svelte/attachments';
 import { on } from 'svelte/events';
 
-import type { HTMLPointerEvent } from './html.ts';
+type WithTarget<E extends UIEvent> = E & {
+	currentTarget: HTMLElement;
+};
 
-export type DragStartHandlersFactory = (e: HTMLPointerEvent) => {
+type PointerEventWithTarget = WithTarget<PointerEvent>;
+
+export type DragStartHandlersFactory = (e: PointerEventWithTarget) => {
 	onMove: (e: PointerEvent) => void;
-	onUp?: () => void;
+	onStop?: () => void;
 };
 
 export function onDragStart(createHandlers: DragStartHandlersFactory): Attachment<HTMLElement> {
 	return (el) =>
 		on(el, 'pointerdown', (e) => {
+			if (e.button !== 0) return;
+
 			el.setPointerCapture(e.pointerId);
 
-			const { onMove, onUp } = createHandlers(e);
+			const abortController = new AbortController();
+			const { onMove, onStop } = createHandlers(e);
 
-			function onUpHandler() {
+			function handleStop() {
 				el.releasePointerCapture(e.pointerId);
-				onUp?.();
-				window.removeEventListener('pointermove', onMove);
-				window.removeEventListener('pointerup', onUpHandler);
+				abortController.abort();
+				onStop?.();
 			}
 
-			window.addEventListener('pointermove', onMove);
-			window.addEventListener('pointerup', onUpHandler);
+			function onKeydown(e: KeyboardEvent) {
+				if (e.key === 'Escape') {
+					handleStop();
+				}
+			}
+
+			window.addEventListener('pointermove', onMove, abortController);
+			window.addEventListener('pointerup', handleStop, abortController);
+			window.addEventListener('keydown', onKeydown, abortController);
+			window.addEventListener('contextmenu', handleStop, abortController);
 		});
 }
