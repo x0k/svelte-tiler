@@ -113,17 +113,17 @@
 			height: 100%;
 			display: flex;
 			flex-direction: column;
-			> .tab-bar {
+			.tab-bar {
 				display: flex;
 				flex-direction: row;
-				> .tab-header {
+				.tab-header {
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					padding: 0.4rem 0.8rem;
 				}
 			}
-			> .tab-content {
+			.tab-content {
 				flex-grow: 1;
 			}
 		}

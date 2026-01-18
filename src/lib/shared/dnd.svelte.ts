@@ -8,14 +8,26 @@ type WithTarget<E extends UIEvent> = E & {
 export type PointerEventWithTarget = WithTarget<PointerEvent>;
 
 interface DndContext<Data = unknown> {
-	__data?: Data;
 	sourceId: string | undefined;
+	readonly sourceData?: Data;
+	setSourceData(ref: () => Data | undefined): void;
 	targetId: string | undefined;
 }
 
+const constantUndefined = () => undefined;
+
 class DndContextImpl<D> implements DndContext<D> {
+	#dataRef: () => D | undefined = $state.raw(constantUndefined);
+
 	sourceId: string | undefined = $state.raw();
+	get sourceData() {
+		return this.#dataRef();
+	}
 	targetId: string | undefined = $state.raw();
+
+	setSourceData(ref: () => D | undefined): void {
+		this.#dataRef = ref;
+	}
 }
 
 export function createDndContext<D>(): DndContext<D> {
@@ -35,10 +47,7 @@ export interface DraggableOptions<D> {
 	onStop?: () => void;
 }
 
-export function createDraggable<D>(
-	ctx: DndContext<D>,
-	options: DraggableOptions<D>
-): Draggable {
+export function createDraggable<D>(ctx: DndContext<D>, options: DraggableOptions<D>): Draggable {
 	const id = crypto.randomUUID();
 	return {
 		get isDragged() {
@@ -54,6 +63,7 @@ export function createDraggable<D>(
 				const abortController = new AbortController();
 
 				ctx.sourceId = id;
+				ctx.setSourceData(() => options.data);
 				options.onStart?.(e);
 
 				function handleMove(e: PointerEvent) {
@@ -64,6 +74,7 @@ export function createDraggable<D>(
 					el.releasePointerCapture(e.pointerId);
 					abortController.abort();
 					options.onStop?.();
+					ctx.setSourceData(constantUndefined);
 					ctx.sourceId = undefined;
 				}
 
@@ -81,13 +92,32 @@ export function createDraggable<D>(
 	};
 }
 
-// export interface DroppableOptions<T extends Tile> {
-// 	accept: (tile: Tile) => tile is T;
-// 	onDrop: (tile: T) => void;
-// }
-
 export interface Droppable {
 	isReady: boolean;
 	isOver: boolean;
-	attachment: Attachment<HTMLElement>;
+	element: Attachment<HTMLElement>;
+}
+
+export interface DroppableOptions<D, T extends D = D> {
+	accept?: (data: D) => data is T;
+	onEnter?: () => void;
+	onLeave?: () => void;
+	onDrop?: (data: T) => void;
+}
+
+export function createDroppable<D, T extends D>(
+	ctx: DndContext<D>,
+	options: DroppableOptions<D, T>
+): Droppable {
+	const id = crypto.randomUUID();
+	return {
+		get isReady() {
+			const data = ctx.sourceData;
+			return data !== undefined && options.accept?.(data) === true;
+		},
+		get isOver() {
+			return ctx.targetId === id;
+		},
+		element: (el) => {}
+	};
 }
