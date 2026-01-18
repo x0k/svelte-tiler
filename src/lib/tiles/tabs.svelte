@@ -124,7 +124,6 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
-			<div class="tab-divider"></div>
 			<button
 				class="tab-header"
 				role="tab"
@@ -136,7 +135,6 @@
 				{@render tabHeader(tile, i)}
 			</button>
 		{/each}
-		<div class="tab-divider"></div>
 	</div>
 	<div class="tab-content">
 		{#if TileComponent}

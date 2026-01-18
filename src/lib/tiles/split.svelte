@@ -1,6 +1,5 @@
 <script lang="ts" module>
 	import { getContext, setContext, type Snippet } from 'svelte';
-	import { createAttachmentKey, type Attachment } from 'svelte/attachments';
 
 	import type { Registry } from '$lib/shared/registry.js';
 	import {
@@ -101,127 +100,112 @@
 	);
 
 	let splitEl: HTMLDivElement;
-
-	function createResizer(e: PointerEventWithTarget, i: number) {
-		const resizerEl = e.currentTarget;
-		const l = tile.constraints.length;
-		const isRow = tile.direction === 'row';
-		const containerSize =
-			(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
-		const totalWeight = tile.constraints.reduce((a, b) => a + b.weight, 0);
-
-		let lastDir = 0;
-		let startPos = isRow ? e.pageX : e.pageY;
-		let lastConstraints = $state.snapshot(tile.constraints);
-		let previousPos = startPos;
-		let remaining = 0;
-		let currentDir = 0;
-		const expand = (j: number) => {
-			const constraints = lastConstraints[j];
-			const isConstrained = constraints.maxWeight !== 0;
-			if (constraints.weight < constraints.maxWeight || !isConstrained) {
-				const available = constraints.maxWeight - constraints.weight;
-				if (available < remaining && isConstrained) {
-					tile.constraints[j].weight = constraints.maxWeight;
-					remaining -= available;
-				} else {
-					tile.constraints[j].weight = constraints.weight + remaining;
-					remaining = 0;
-				}
-			}
-		};
-		const shrink = (j: number) => {
-			const constraints = lastConstraints[j];
-			if (constraints.weight > constraints.minWeight) {
-				const available = constraints.weight - constraints.minWeight;
-				if (available < remaining) {
-					tile.constraints[j].weight = constraints.minWeight;
-					remaining -= available;
-				} else {
-					tile.constraints[j].weight = constraints.weight - remaining;
-					remaining = 0;
-				}
-			}
-		};
-		const adjustBy = (adjust: (index: number) => void) => {
-			if (currentDir < 0) {
-				let j = i - 1;
-				while (j >= 0 && remaining > 0) {
-					adjust(j--);
-				}
-			} else {
-				let j = i;
-				while (j < l && remaining > 0) {
-					adjust(j++);
-				}
-			}
-		};
-
-		return {
-			onMove(e: PointerEvent) {
-				const currentPos = isRow ? e.pageX : e.pageY;
-				currentDir = Math.sign(currentPos - previousPos);
-				if (currentDir === 0) {
-					return;
-				}
-				const resizerRect = resizerEl.getBoundingClientRect();
-				if (
-					isRow
-						? currentDir < 0
-							? currentPos < resizerRect.right
-							: currentPos > resizerRect.left
-						: currentDir < 0
-							? currentPos < resizerRect.bottom
-							: currentPos > resizerRect.top
-				) {
-					if (currentDir !== lastDir) {
-						startPos = previousPos;
-						lastConstraints = $state.snapshot(tile.constraints);
-						lastDir = currentDir;
-					}
-					const deltaWeight = Math.abs(((currentPos - startPos) * totalWeight) / containerSize);
-					if (deltaWeight > 0) {
-						remaining = deltaWeight;
-						adjustBy(shrink);
-						remaining = deltaWeight - remaining;
-						if (remaining > 0) {
-							currentDir *= -1;
-							adjustBy(expand);
-						}
-					}
-				}
-				previousPos = currentPos;
-			},
-			onStop() {
-				delete resizerEl.dataset.dragged;
-				for (let j = 0; j < tile.constraints.length; j++) {
-					const c = tile.constraints[j];
-					c.weight = Number.parseFloat(c.weight.toFixed(2));
-				}
-			}
-		};
-	}
-
-	let resizer: ReturnType<typeof createResizer>;
 </script>
 
 <div bind:this={splitEl} class="split" style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const Component = getTileComponent(ctx, t)}
-		{@const draggable = createDraggable(dndCtx, {
-			onStart(e) {
-				resizer = createResizer(e, i);
-			},
-			onMove(e) {
-				resizer.onMove(e);
-			},
-			onStop() {
-				resizer.onStop();
-			}
+		{@const draggable = createDraggable(dndCtx, (e: PointerEventWithTarget) => {
+			const resizerEl = e.currentTarget;
+			const l = tile.constraints.length;
+			const isRow = tile.direction === 'row';
+			const containerSize =
+				(isRow ? splitEl.clientWidth : splitEl.clientHeight) - (l - 1) * tile.gapPx;
+			const totalWeight = tile.constraints.reduce((a, b) => a + b.weight, 0);
+
+			let lastDir = 0;
+			let startPos = isRow ? e.pageX : e.pageY;
+			let lastConstraints = $state.snapshot(tile.constraints);
+			let previousPos = startPos;
+			let remaining = 0;
+			let currentDir = 0;
+			const expand = (j: number) => {
+				const constraints = lastConstraints[j];
+				const isConstrained = constraints.maxWeight !== 0;
+				if (constraints.weight < constraints.maxWeight || !isConstrained) {
+					const available = constraints.maxWeight - constraints.weight;
+					if (available < remaining && isConstrained) {
+						tile.constraints[j].weight = constraints.maxWeight;
+						remaining -= available;
+					} else {
+						tile.constraints[j].weight = constraints.weight + remaining;
+						remaining = 0;
+					}
+				}
+			};
+			const shrink = (j: number) => {
+				const constraints = lastConstraints[j];
+				if (constraints.weight > constraints.minWeight) {
+					const available = constraints.weight - constraints.minWeight;
+					if (available < remaining) {
+						tile.constraints[j].weight = constraints.minWeight;
+						remaining -= available;
+					} else {
+						tile.constraints[j].weight = constraints.weight - remaining;
+						remaining = 0;
+					}
+				}
+			};
+			const adjustBy = (adjust: (index: number) => void) => {
+				if (currentDir < 0) {
+					let j = i - 1;
+					while (j >= 0 && remaining > 0) {
+						adjust(j--);
+					}
+				} else {
+					let j = i;
+					while (j < l && remaining > 0) {
+						adjust(j++);
+					}
+				}
+			};
+
+			return {
+				onMove(e: PointerEvent) {
+					const currentPos = isRow ? e.pageX : e.pageY;
+					currentDir = Math.sign(currentPos - previousPos);
+					if (currentDir === 0) {
+						return;
+					}
+					const resizerRect = resizerEl.getBoundingClientRect();
+					if (
+						isRow
+							? currentDir < 0
+								? currentPos < resizerRect.right
+								: currentPos > resizerRect.left
+							: currentDir < 0
+								? currentPos < resizerRect.bottom
+								: currentPos > resizerRect.top
+					) {
+						if (currentDir !== lastDir) {
+							startPos = previousPos;
+							lastConstraints = $state.snapshot(tile.constraints);
+							lastDir = currentDir;
+						}
+						const deltaWeight = Math.abs(((currentPos - startPos) * totalWeight) / containerSize);
+						if (deltaWeight > 0) {
+							remaining = deltaWeight;
+							adjustBy(shrink);
+							remaining = deltaWeight - remaining;
+							if (remaining > 0) {
+								currentDir *= -1;
+								adjustBy(expand);
+							}
+						}
+					}
+					previousPos = currentPos;
+				},
+				onStop() {
+					for (let j = 0; j < tile.constraints.length; j++) {
+						const c = tile.constraints[j];
+						c.weight = Number.parseFloat(c.weight.toFixed(2));
+					}
+				}
+			};
 		})}
 		<div class="item" style="--grow: {tile.constraints[i].weight}">
 			{#if i > 0}
-				<div class="resizer" {@attach draggable.handle} data-dragged={draggable.isDragged}>
+				<div class="resizer" {@attach draggable.register} data-dragged={draggable.isDragged}>
 					{@render resizerSnippet?.(draggable, tile, i)}
 				</div>
 			{/if}
