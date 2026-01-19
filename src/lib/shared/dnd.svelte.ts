@@ -1,4 +1,3 @@
-import type { Attachment } from 'svelte/attachments';
 import { SvelteMap } from 'svelte/reactivity';
 import { on } from 'svelte/events';
 
@@ -8,144 +7,272 @@ type WithTarget<E extends UIEvent> = E & {
 
 export type PointerEventWithTarget = WithTarget<PointerEvent>;
 
-interface DndContext<D> {
-	sourceId: string | undefined;
-	targetId: string | undefined;
-	draggables: Map<string, Draggable<D>>;
-	droppables: Map<string, Droppable>;
-}
+const INTERNALS = Symbol();
 
-class DndContextImpl<D> implements DndContext<D> {
+export class DndContext<D> {
 	sourceId: string | undefined = $state.raw();
 	targetId: string | undefined = $state.raw();
 	draggables = new SvelteMap<string, Draggable<D>>();
-	droppables = new SvelteMap<string, Droppable>();
+	droppables = new SvelteMap<string, Droppable<D, any, any>>();
+
+	findDroppable(
+		draggable: Draggable<D>,
+		{ clientX: x, clientY: y }: PointerEvent
+	): Droppable<D, any, any> | undefined {
+		const data = draggable.data;
+		const isDataDefined = data !== undefined;
+		for (const d of this.droppables.values()) {
+			if (d.element === undefined) {
+				continue;
+			}
+			const r = d.element?.getBoundingClientRect();
+			if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
+				continue;
+			}
+			if (d.accepts === undefined || (isDataDefined && d.accepts(data))) {
+				return d;
+			}
+		}
+	}
 }
 
-export function createDndContext<D>(): DndContext<D> {
-	return new DndContextImpl();
-}
-
-export interface Draggable<D = unknown> {
-	readonly element: HTMLElement | undefined;
-	readonly data: D | undefined;
-	readonly isDragged: boolean | undefined;
-	register: Attachment<HTMLElement>;
-	// handle: Attachment<HTMLElement>;
-}
+export type StopReason = 'drop' | 'cancel';
 
 export interface DraggableOptions<D> {
 	data?: D;
+	feedback?: (
+		el: HTMLElement,
+		e: PointerEventWithTarget
+	) => {
+		onMove: (e: PointerEvent) => void;
+		onStop: (reason: StopReason) => void;
+	};
 	onStart?: (e: PointerEventWithTarget) => void;
 	onMove?: (e: PointerEvent) => void;
 	onStop?: () => void;
 }
 
-export function createDraggable<D>(
-	ctx: DndContext<D>,
-	optionsOrFactory: DraggableOptions<D> | ((e: PointerEventWithTarget) => DraggableOptions<D>)
-): Draggable<D> {
-	const id = crypto.randomUUID();
-	let element: HTMLElement | undefined = $state.raw();
-	let options: DraggableOptions<D> = {};
-	const self: Draggable<D> = {
-		get element() {
-			return element;
-		},
-		get data() {
-			return options.data;
-		},
-		get isDragged() {
-			return ctx.sourceId === id;
-		},
-		register(el) {
-			ctx.draggables.set(id, self);
-			element = el;
-			const dispose = on(el, 'pointerdown', (e) => {
-				if (e.button !== 0) return;
+export class Draggable<D = unknown> {
+	id = crypto.randomUUID();
 
-				el.setPointerCapture(e.pointerId);
+	#options: DraggableOptions<D> = {};
+	#element: HTMLElement | undefined = $state.raw();
+	#disposePointerDownListener: (() => void) | undefined;
 
-				const abortController = new AbortController();
+	constructor(
+		protected readonly ctx: DndContext<D>,
+		protected readonly optionsOrFactory:
+			| DraggableOptions<D>
+			| ((e: PointerEventWithTarget) => DraggableOptions<D>)
+	) {}
 
-				ctx.sourceId = id;
-				options = typeof optionsOrFactory === 'function' ? optionsOrFactory(e) : optionsOrFactory;
+	get data() {
+		return this.#options.data;
+	}
 
-				options.onStart?.(e);
+	get element() {
+		return this.#element;
+	}
 
-				function handleMove(e: PointerEvent) {
-					options.onMove?.(e);
+	get isDragged() {
+		return this.ctx.sourceId === this.id;
+	}
+
+	[Symbol.dispose]() {
+		this.#disposePointerDownListener?.();
+		this.#element = undefined;
+		this.ctx.draggables.delete(this.id);
+	}
+
+	register = (el: HTMLElement) => {
+		this.ctx.draggables.set(this.id, this);
+		this.#element = el;
+		this.#disposePointerDownListener = on(el, 'pointerdown', this.createPointerDownHandler(el));
+		return () => {
+			this[Symbol.dispose]();
+		};
+	};
+
+	protected createPointerDownHandler(el: HTMLElement) {
+		return (e: PointerEventWithTarget) => {
+			console.log('HANDLER');
+			if (e.button !== 0) return;
+
+			el.setPointerCapture(e.pointerId);
+
+			const abortController = new AbortController();
+
+			this.ctx.sourceId = this.id;
+			this.#options =
+				typeof this.optionsOrFactory === 'function'
+					? this.optionsOrFactory(e)
+					: this.optionsOrFactory;
+
+			const feedback = this.#options.feedback?.(el, e);
+
+			this.#options.onStart?.(e);
+
+			let activeDroppable: Droppable<D, any, any> | undefined;
+			const handleMove = (e: PointerEvent) => {
+				this.#options.onMove?.(e);
+
+				feedback?.onMove(e);
+
+				const nextDroppable = this.ctx.findDroppable(this, e);
+				if (activeDroppable !== nextDroppable) {
+					activeDroppable?.[INTERNALS].onLeave?.();
+					nextDroppable?.[INTERNALS].onEnter?.();
+					activeDroppable = nextDroppable;
+					this.ctx.targetId = activeDroppable?.id;
 				}
-
-				function handleStop() {
-					el.releasePointerCapture(e.pointerId);
-					abortController.abort();
-					options.onStop?.();
-					ctx.sourceId = undefined;
-				}
-
-				function onKeydown(e: KeyboardEvent) {
-					if (e.key === 'Escape') {
-						handleStop();
-					}
-				}
-
-				window.addEventListener('pointermove', handleMove, abortController);
-				window.addEventListener('pointerup', handleStop, abortController);
-				window.addEventListener('keydown', onKeydown, abortController);
-				window.addEventListener('contextmenu', handleStop, abortController);
-			});
-			return () => {
-				dispose();
-				element = undefined;
-				ctx.draggables.delete(id);
+				activeDroppable?.[INTERNALS].onMove?.(e);
 			};
+
+			const handleStop = (reason: StopReason) => {
+				el.releasePointerCapture(e.pointerId);
+				abortController.abort();
+
+				if (reason === 'drop') {
+					activeDroppable?.[INTERNALS].onDrop?.(this.#options.data as D);
+				}
+				activeDroppable?.[INTERNALS].onLeave?.();
+				this.ctx.targetId = undefined;
+
+				feedback?.onStop(reason);
+
+				this.#options.onStop?.();
+				this.ctx.sourceId = undefined;
+			};
+
+			function onKeydown(e: KeyboardEvent) {
+				if (e.key === 'Escape') {
+					handleStop('cancel');
+				}
+			}
+
+			window.addEventListener('pointermove', handleMove, abortController);
+			window.addEventListener('pointerup', () => handleStop('drop'), abortController);
+			window.addEventListener('keydown', onKeydown, abortController);
+			window.addEventListener('contextmenu', () => handleStop('cancel'), abortController);
+		};
+	}
+}
+
+export interface DroppableOptions<D, T extends D, M> {
+	accepts?: (data: D) => data is T;
+	onEnter?: () => M;
+	onMove?: (e: PointerEvent) => M;
+	onLeave?: () => M;
+	onDrop?: (data: T) => M;
+}
+
+export class Droppable<D, T extends D, M> {
+	#element: HTMLElement | undefined = $state.raw();
+	#options: DroppableOptions<D, T, M> = {};
+	#meta: M | undefined = $state.raw();
+
+	readonly id = crypto.randomUUID();
+	readonly [INTERNALS]: Required<Omit<DroppableOptions<D, T, void>, 'accepts'>> = {
+		onDrop: (data) => {
+			if (this.#options.onDrop) {
+				this.#meta = this.#options.onDrop(data);
+			}
+		},
+		onEnter: () => {
+			if (this.#options.onEnter) {
+				this.#meta = this.#options.onEnter();
+			}
+		},
+		onLeave: () => {
+			if (this.#options.onLeave) {
+				this.#meta = this.#options.onLeave();
+			}
+		},
+		onMove: (e) => {
+			if (this.#options.onMove) {
+				this.#meta = this.#options.onMove(e);
+			}
 		}
 	};
-	return self;
-}
 
-export interface Droppable {
-	readonly element: HTMLElement | undefined;
-	readonly isReady: boolean;
-	readonly isOver: boolean;
-	register: Attachment<HTMLElement>;
-}
+	constructor(
+		protected readonly ctx: DndContext<D>,
+		protected readonly optionsOrFactory:
+			| DroppableOptions<D, T, M>
+			| ((el: HTMLElement) => DroppableOptions<D, T, M>)
+	) {}
 
-export interface DroppableOptions<D, T extends D = D> {
-	accept?: (data: D) => data is T;
-	onEnter?: () => void;
-	onMove?: (e: PointerEvent) => void;
-	onLeave?: () => void;
-	onDrop?: (data: T) => void;
-}
+	get accepts() {
+		return this.#options.accepts;
+	}
 
-export function createDroppable<D, T extends D>(
-	ctx: DndContext<D>,
-	options: DroppableOptions<D, T>
-): Droppable {
-	const id = crypto.randomUUID();
-	let element: HTMLElement | undefined = $state.raw();
-	const self: Droppable = {
-		get element() {
-			return element;
-		},
-		get isReady() {
-			const sId = ctx.sourceId;
-			const data = sId !== undefined ? ctx.draggables.get(sId)?.data : undefined;
-			return data !== undefined && options.accept?.(data) === true;
-		},
-		get isOver() {
-			return ctx.targetId === id;
-		},
-		register(el) {
-			ctx.droppables.set(id, self);
-			element = el;
-			return () => {
-				element = undefined;
-				ctx.droppables.delete(id);
-			};
-		}
+	get element() {
+		return this.#element;
+	}
+
+	get isOver() {
+		return this.ctx.targetId === this.id;
+	}
+
+	get meta() {
+		return this.#meta;
+	}
+
+	[Symbol.dispose]() {
+		this.#element = undefined;
+		this.ctx.droppables.delete(this.id);
+	}
+
+	register = (el: HTMLElement) => {
+		this.ctx.droppables.set(this.id, this);
+		this.#element = el;
+		return () => {
+			this[Symbol.dispose]();
+		};
 	};
-	return self;
+
+	protected setInternals(el: HTMLElement) {
+		this.#options =
+			typeof this.optionsOrFactory === 'function'
+				? this.optionsOrFactory(el)
+				: this.optionsOrFactory;
+	}
+}
+
+export class ClonedGhost {
+	#element: HTMLElement;
+	#offsetX: number;
+	#offsetY: number;
+
+	constructor(element: HTMLElement, event: PointerEventWithTarget) {
+		const rect = element.getBoundingClientRect();
+		this.#element = element.cloneNode(true) as HTMLElement;
+		this.#offsetX = event.clientX - rect.left;
+		this.#offsetY = event.clientY - rect.top;
+
+		this.#element.style.position = 'fixed';
+		this.#element.style.left = '0';
+		this.#element.style.top = '0';
+		this.#element.style.width = `${rect.width}px`;
+		this.#element.style.height = `${rect.height}px`;
+		this.#element.style.pointerEvents = 'none';
+		this.#element.style.zIndex = '9999';
+		this.#element.style.opacity = '0.85';
+		this.onMove(event);
+	}
+
+	attach(root = document.body) {
+		root.appendChild(this.#element);
+		return this;
+	}
+
+	onMove(e: PointerEvent) {
+		const x = e.clientX - this.#offsetX;
+		const y = e.clientY - this.#offsetY;
+		this.#element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+	}
+
+	onStop() {
+		this.#element.remove();
+	}
 }

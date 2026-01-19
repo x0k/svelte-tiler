@@ -3,10 +3,10 @@
 
 	import type { Registry } from '$lib/shared/registry.js';
 	import {
-		createDndContext,
-		createDraggable,
-		type Draggable,
-		type PointerEventWithTarget
+		type PointerEventWithTarget,
+		DndContext,
+		Draggable,
+		Droppable
 	} from '$lib/shared/dnd.svelte.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 
@@ -93,7 +93,7 @@
 
 	const ctx = getTilerContext();
 	const splitCtx = getContext<SplitContext | undefined>(SPLIT_CONTEXT_KEY);
-	const dndCtx = createDndContext();
+	const dndCtx = new DndContext();
 
 	const resizerSnippet = $derived(
 		(tile.resizer !== undefined && splitCtx?.resizer?.get(tile.resizer)) || undefined
@@ -105,7 +105,7 @@
 <div bind:this={splitEl} class="split" style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const Component = getTileComponent(ctx, t)}
-		{@const draggable = createDraggable(dndCtx, (e: PointerEventWithTarget) => {
+		{@const draggable = new Draggable(dndCtx, (e: PointerEventWithTarget) => {
 			const resizerEl = e.currentTarget;
 			const l = tile.constraints.length;
 			const isRow = tile.direction === 'row';

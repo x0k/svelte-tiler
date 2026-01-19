@@ -1,5 +1,7 @@
 import { createContext, type Component } from 'svelte';
 
+import type { DndContext } from './shared/dnd.svelte.ts';
+
 import type { Tile, TileProps, TileType } from './tile.js';
 import { TILER_COMPONENTS } from './internal.js';
 
@@ -7,6 +9,7 @@ export type TilerComponents = { [T in TileType]: Component<TileProps<T>, {}, 'ti
 
 export interface TilerContext {
 	[TILER_COMPONENTS]: TilerComponents;
+	dnd: DndContext<Tile>;
 }
 
 export const [getTilerContext, setTilerContext] = createContext<TilerContext>();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DndContext } from './shared/dnd.svelte.ts';
 	import { TILER_COMPONENTS } from './internal.js';
 	import {
 		getTileComponent,
@@ -13,7 +14,8 @@
 	const ctx: TilerContext = {
 		get [TILER_COMPONENTS]() {
 			return components;
-		}
+		},
+		dnd: new DndContext()
 	};
 	setTilerContext(ctx);
 

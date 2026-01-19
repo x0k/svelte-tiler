@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	import { getContext, setContext, type Snippet } from 'svelte';
 
-	import { onDragStart, type DragStartHandlersFactory } from '$lib/shared/dnd.js';
+	import { ClonedGhost, Draggable, Droppable } from '$lib/shared/dnd.svelte.js';
 	import type { Registry } from '$lib/shared/registry.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 	import type { Tile, Tiles } from '$lib/tile.js';
@@ -70,51 +70,8 @@
 		(tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
 	);
 
-	let draggedId = $state.raw<string | undefined>();
-
 	const selectedTile = $derived(tile.children[tile.selectedTab] satisfies Tile as Tile | undefined);
 	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
-
-	function reorderTabs(from: number, to: number) {
-		const tabs = tile.children;
-		const titles = tile.titles;
-		const [moved] = tabs.splice(from, 1);
-		const [movedTitle] = titles.splice(from, 1);
-
-		tabs.splice(to, 0, moved);
-		titles.splice(to, 0, movedTitle);
-
-		if (tile.selectedTab === from) {
-			tile.selectedTab = to;
-		} else if (tile.selectedTab > from && tile.selectedTab <= to) {
-			tile.selectedTab--;
-		} else if (tile.selectedTab < from && tile.selectedTab >= to) {
-			tile.selectedTab++;
-		}
-	}
-
-	function handleDragStart(id: string, index: number): DragStartHandlersFactory {
-		return () => {
-			draggedId = id;
-
-			let draggingTabIndex = index;
-			return {
-				onMove(e) {
-					const over = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-					if (!over || !over.classList.contains('tab-header')) return;
-
-					const overIndex = [...over.parentElement!.children].indexOf(over);
-					if (overIndex === draggingTabIndex) return;
-
-					reorderTabs(draggingTabIndex, overIndex);
-					draggingTabIndex = overIndex;
-				},
-				onStop() {
-					draggedId = undefined;
-				}
-			};
-		};
-	}
 </script>
 
 {#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}
@@ -124,13 +81,46 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
+			{@const draggable = new Draggable(ctx.dnd, {
+				data: createTabs({
+					...tile,
+					tabs: [[tile.titles[i], t]]
+				}),
+				feedback: (el, e) => new ClonedGhost(el, e).attach()
+			})}
+			{@const droppable = new Droppable(ctx.dnd, (el) => ({
+				accepts: (t): t is Tiles['tabs'] => t.type === 'tabs',
+				onMove(e) {
+					const rect = el.getBoundingClientRect();
+
+					const x = e.clientX - rect.left;
+					const y = e.clientY - rect.top;
+
+					const EDGE_RATIO = 0.3;
+
+					const left = rect.width * EDGE_RATIO;
+					const right = rect.width * (1 - EDGE_RATIO);
+					const top = rect.height * EDGE_RATIO;
+					const bottom = rect.height * (1 - EDGE_RATIO);
+
+					const horizontal = x < left ? 'left' : x > right ? 'right' : 'center';
+
+					const vertical = y < top ? 'top' : y > bottom ? 'bottom' : 'center';
+
+					return { horizontal, vertical };
+				}
+			}))}
 			<button
+				{@attach draggable.register}
+				{@attach draggable.register}
 				class="tab-header"
 				role="tab"
 				onclick={() => (tile.selectedTab = i)}
-				{@attach onDragStart(handleDragStart(t.id, i))}
-				data-dragged={draggedId === t.id}
+				data-over={droppable.isOver}
+				data-dragged={draggable.isDragged}
 				data-selected={tile.selectedTab === i}
+				data-horizontal={droppable.meta?.horizontal}
+				data-vertical={droppable.meta?.vertical}
 			>
 				{@render tabHeader(tile, i)}
 			</button>
