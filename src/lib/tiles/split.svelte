@@ -2,7 +2,7 @@
 	import { getContext, setContext, type Snippet } from 'svelte';
 
 	import type { Registry } from '$lib/shared/registry.js';
-	import { type PointerEventWithTarget, DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
+	import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 
 	import type { Tile, Tiles } from '../tile.js';
@@ -116,7 +116,7 @@
 			this.index = index;
 		}
 
-		protected onStart(el: HTMLElement, e: PointerEvent): void {
+		protected onStart(e: PointerEvent, el: HTMLElement): void {
 			this.resizerEl = el;
 			this.containerSize = this.isRow ? splitEl.clientWidth : splitEl.clientHeight;
 

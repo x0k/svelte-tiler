@@ -1,12 +1,6 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { on } from 'svelte/events';
 
-type WithTarget<E extends UIEvent> = E & {
-	currentTarget: HTMLElement;
-};
-
-export type PointerEventWithTarget = WithTarget<PointerEvent>;
-
 const ON_ENTER = Symbol('on-enter-key');
 const ON_MOVE = Symbol('on-move-key');
 const ON_LEAVE = Symbol('on-leave-key');
@@ -19,16 +13,15 @@ export class DndContext<D = unknown> {
 	droppables = new SvelteMap<string, Droppable<D, any>>();
 
 	findDroppable(x: number, y: number, data: D | undefined): Droppable<D, any> | undefined {
-		const isDataDefined = data !== undefined;
 		for (const d of this.droppables.values()) {
 			if (d.element === undefined) {
 				continue;
 			}
-			const r = d.element?.getBoundingClientRect();
+			const r = d.element.getBoundingClientRect();
 			if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
 				continue;
 			}
-			if (d.accepts === undefined || (isDataDefined && d.accepts(data))) {
+			if (d.accepts(data)) {
 				return d;
 			}
 		}
@@ -41,16 +34,20 @@ export interface StopEvent {
 	reason: StopReason;
 }
 
-export class Draggable<D = unknown> {
-	protected _disposePointerDownHandler: (() => void) | undefined;
-	protected _disposeClickHandler: (() => void) | undefined;
-	protected didDrag = false;
+export interface DraggableOptions<D> {
+	data?: D;
+}
 
-	id = crypto.randomUUID();
+export class Draggable<D = unknown> {
+	#disposePointerDownHandler: (() => void) | undefined;
+	#disposeClickHandler: (() => void) | undefined;
+	#didDrag = false;
+
+	readonly id = crypto.randomUUID();
 
 	constructor(
 		protected readonly ctx: DndContext<D>,
-		protected readonly dataRef?: () => D
+		protected readonly options?: DraggableOptions<D>
 	) {
 		this.register = this.register.bind(this);
 	}
@@ -61,17 +58,17 @@ export class Draggable<D = unknown> {
 
 	register(el: HTMLElement) {
 		this.ctx.draggables.set(this.id, this);
-		this._disposePointerDownHandler = on(el, 'pointerdown', (e) => this.pointerDownHandler(e));
-		this._disposeClickHandler = on(
+		this.#disposePointerDownHandler = on(el, 'pointerdown', (e) => this.pointerDownHandler(e));
+		this.#disposeClickHandler = on(
 			el,
 			'click',
 			(e) => {
-				if (!this.didDrag) {
+				if (!this.#didDrag) {
 					return;
 				}
 				e.stopImmediatePropagation();
 				e.preventDefault();
-				this.didDrag = false;
+				this.#didDrag = false;
 			},
 			{ capture: true }
 		);
@@ -81,25 +78,29 @@ export class Draggable<D = unknown> {
 	}
 
 	[Symbol.dispose]() {
-		this._disposeClickHandler?.();
-		this._disposePointerDownHandler?.();
+		this.#disposeClickHandler?.();
+		this.#disposePointerDownHandler?.();
 		this.ctx.draggables.delete(this.id);
 	}
 
 	protected feedback(
-		_el: HTMLElement,
-		_e: PointerEvent
+		_e: PointerEvent,
+		_el: HTMLElement
 	): { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void } | undefined {
 		return undefined;
 	}
 
-	protected onStart(_el: HTMLElement, _e: PointerEvent) {}
+	protected onStart(_e: PointerEvent, _el: HTMLElement) {}
 
 	protected onMove(_e: PointerEvent) {}
 
 	protected onStop(_e: StopEvent) {}
 
-	protected pointerDownHandler(event: PointerEventWithTarget) {
+	protected pointerDownHandler(
+		event: PointerEvent & {
+			currentTarget: HTMLElement;
+		}
+	) {
 		if (event.button !== 0 || !event.isPrimary) {
 			return;
 		}
@@ -116,7 +117,6 @@ export class Draggable<D = unknown> {
 					onStop: (e: StopEvent) => void;
 			  }
 			| undefined;
-		let data: D | undefined;
 
 		let activeDroppable: Droppable<D, any> | undefined;
 		const handleMove = (e: PointerEvent) => {
@@ -124,24 +124,23 @@ export class Draggable<D = unknown> {
 				return;
 			}
 
-			if (!this.didDrag) {
+			if (!this.#didDrag) {
 				const dx = e.clientX - event.clientX;
 				const dy = e.clientY - event.clientY;
 				if (dx * dx + dy * dy < 16) {
 					return;
 				}
-				this.didDrag = true;
+				this.#didDrag = true;
 				this.ctx.sourceId = this.id;
-				feedback = this.feedback(el, e);
-				this.onStart(el, e);
-				data = this.dataRef?.();
+				feedback = this.feedback(e, el);
+				this.onStart(e, el);
 			}
 
 			this.onMove(e);
 
 			feedback?.onMove(e);
 
-			const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, data);
+			const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, this.options?.data);
 			if (activeDroppable !== nextDroppable) {
 				activeDroppable?.[ON_LEAVE]();
 				nextDroppable?.[ON_ENTER]();
@@ -155,12 +154,12 @@ export class Draggable<D = unknown> {
 			el.releasePointerCapture(event.pointerId);
 			abortController.abort();
 
-			if (!this.didDrag) {
+			if (!this.#didDrag) {
 				return;
 			}
 
 			if (ev.reason === 'drop') {
-				activeDroppable?.[ON_DROP](data as D);
+				activeDroppable?.[ON_DROP](this.options?.data);
 			}
 			activeDroppable?.[ON_LEAVE]();
 			this.ctx.targetId = undefined;
@@ -194,7 +193,7 @@ export class Draggable<D = unknown> {
 }
 
 export class Droppable<D = unknown, T extends D = D> {
-	protected _element: HTMLElement | undefined = $state.raw();
+	#element: HTMLElement | undefined = $state.raw();
 
 	readonly id = crypto.randomUUID();
 
@@ -203,7 +202,7 @@ export class Droppable<D = unknown, T extends D = D> {
 	}
 
 	get element() {
-		return this._element;
+		return this.#element;
 	}
 
 	get isOver() {
@@ -211,19 +210,19 @@ export class Droppable<D = unknown, T extends D = D> {
 	}
 
 	[Symbol.dispose]() {
-		this._element = undefined;
+		this.#element = undefined;
 		this.ctx.droppables.delete(this.id);
 	}
 
 	register(el: HTMLElement) {
 		this.ctx.droppables.set(this.id, this);
-		this._element = el;
+		this.#element = el;
 		return () => {
 			this[Symbol.dispose]();
 		};
 	}
 
-	accepts(data: D): data is T {
+	accepts(data: D | undefined): data is T {
 		return true;
 	}
 

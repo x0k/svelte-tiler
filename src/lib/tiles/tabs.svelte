@@ -3,11 +3,14 @@
 
 	import {
 		ClonedGhost,
+		DndContext,
 		Draggable,
 		Droppable,
-		type PointerEventWithTarget
+		type DraggableOptions,
+		type StopEvent
 	} from '$lib/shared/dnd.svelte.js';
 	import type { Registry } from '$lib/shared/registry.js';
+	import { getRectParts, type EdgePart } from '$lib/shared/geometry.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 	import type { Tile, Tiles } from '$lib/tile.js';
 
@@ -78,45 +81,75 @@
 	const selectedTile = $derived(tile.children[tile.selectedTab] satisfies Tile as Tile | undefined);
 	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
 
-	class DroppableTab extends Droppable {
-		horizontal: 'left' | 'center' | 'right' | undefined = $state.raw();
-		vertical: 'top' | 'center' | 'bottom' | undefined = $state.raw();
+	const EDGE_RATIO = 0.3;
+
+	class DroppableSurface extends Droppable<Tile> {
+		horizontal: EdgePart | undefined = $state.raw();
+		vertical: EdgePart | undefined = $state.raw();
+
+		accepts(t: Tile | undefined): t is Tiles['tabs'] {
+			return t?.type === 'tabs';
+		}
 
 		onMove(e: PointerEvent) {
-			if (this._element === undefined) {
-				return;
-			}
-			const rect = this._element.getBoundingClientRect();
-
-			const x = e.clientX - rect.left;
-			const y = e.clientY - rect.top;
-
-			const EDGE_RATIO = 0.3;
-
-			const left = rect.width * EDGE_RATIO;
-			const right = rect.width * (1 - EDGE_RATIO);
-			const top = rect.height * EDGE_RATIO;
-			const bottom = rect.height * (1 - EDGE_RATIO);
-
-			this.horizontal = this.isOver
-				? x < left
-					? 'left'
-					: x > right
-						? 'right'
-						: 'center'
-				: undefined;
-			this.vertical = this.isOver
-				? y < top
-					? 'top'
-					: y > bottom
-						? 'bottom'
-						: 'center'
-				: undefined;
+			const rect = this.element!.getBoundingClientRect();
+			Object.assign(this, getRectParts(rect, e.clientX, e.clientY, EDGE_RATIO));
 		}
 	}
-	class DraggableTab extends Draggable {
-		protected feedback(el: HTMLElement, e: PointerEvent) {
+
+	class DroppableTab extends DroppableSurface {
+		#index: number;
+
+		constructor(ctx: DndContext<Tile>, index: number) {
+			super(ctx);
+			this.#index = index;
+		}
+
+		protected onDrop({ titles, children }: Tiles['tabs']): void {
+			const i = this.#index + (this.horizontal === 'start' ? 0 : 1);
+			tile.children.splice(i, 0, ...children);
+			tile.titles.splice(i, 0, ...titles);
+		}
+	}
+
+	interface DraggableTabOptions extends DraggableOptions<Tile> {
+		id: string;
+		index: number;
+	}
+
+	class DraggableTab extends Draggable<Tile> {
+		#id: string;
+		#index: number;
+
+		constructor(ctx: DndContext<Tile>, options: DraggableTabOptions) {
+			super(ctx, options);
+			this.#id = options.id;
+			this.#index = options.index;
+		}
+
+		protected feedback(e: PointerEvent, el: HTMLElement) {
 			return new ClonedGhost(el, e).attach();
+		}
+
+		protected onStop({ reason }: StopEvent): void {
+			if (reason !== 'drop') {
+				return;
+			}
+			const index = this.getIndex();
+			tile.children.splice(index, 1);
+			tile.titles.splice(index, 1);
+		}
+
+		private getIndex() {
+			const c = tile.children;
+			const i = this.#index;
+			if (i - 1 < c.length && c[i + 1].id === this.#id) {
+				return i + 1;
+			}
+			if (i > 0 && c[i - 1].id === this.#id) {
+				return i - 1;
+			}
+			return i;
 		}
 	}
 </script>
@@ -128,8 +161,15 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
-			{@const droppable = new DroppableTab(ctx.dnd)}
-			{@const draggable = new DraggableTab(ctx.dnd, () => t)}
+			{@const droppable = new DroppableTab(ctx.dnd, i)}
+			{@const draggable = new DraggableTab(ctx.dnd, {
+				id: t.id,
+				index: i,
+				data: createTabs({
+					...tile,
+					tabs: [[tile.titles[i], t]]
+				})
+			})}
 			<button
 				{@attach droppable.register}
 				{@attach draggable.register}
