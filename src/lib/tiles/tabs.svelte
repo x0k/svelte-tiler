@@ -1,7 +1,12 @@
 <script lang="ts" module>
 	import { getContext, setContext, type Snippet } from 'svelte';
 
-	import { ClonedGhost, Draggable, Droppable } from '$lib/shared/dnd.svelte.js';
+	import {
+		ClonedGhost,
+		Draggable,
+		Droppable,
+		type PointerEventWithTarget
+	} from '$lib/shared/dnd.svelte.js';
 	import type { Registry } from '$lib/shared/registry.js';
 	import { getTileComponent, getTilerContext } from '$lib/context.js';
 	import type { Tile, Tiles } from '$lib/tile.js';
@@ -72,6 +77,48 @@
 
 	const selectedTile = $derived(tile.children[tile.selectedTab] satisfies Tile as Tile | undefined);
 	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
+
+	class DroppableTab extends Droppable {
+		horizontal: 'left' | 'center' | 'right' | undefined = $state.raw();
+		vertical: 'top' | 'center' | 'bottom' | undefined = $state.raw();
+
+		onMove(e: PointerEvent) {
+			if (this._element === undefined) {
+				return;
+			}
+			const rect = this._element.getBoundingClientRect();
+
+			const x = e.clientX - rect.left;
+			const y = e.clientY - rect.top;
+
+			const EDGE_RATIO = 0.3;
+
+			const left = rect.width * EDGE_RATIO;
+			const right = rect.width * (1 - EDGE_RATIO);
+			const top = rect.height * EDGE_RATIO;
+			const bottom = rect.height * (1 - EDGE_RATIO);
+
+			this.horizontal = this.isOver
+				? x < left
+					? 'left'
+					: x > right
+						? 'right'
+						: 'center'
+				: undefined;
+			this.vertical = this.isOver
+				? y < top
+					? 'top'
+					: y > bottom
+						? 'bottom'
+						: 'center'
+				: undefined;
+		}
+	}
+	class DraggableTab extends Draggable {
+		protected feedback(el: HTMLElement, e: PointerEventWithTarget) {
+			return new ClonedGhost(el, e).attach();
+		}
+	}
 </script>
 
 {#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}
@@ -81,36 +128,19 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
-			{@const droppable = new Droppable(ctx.dnd, (el) => ({
-				accepts: (t): t is Tiles['tabs'] => t.type === 'tabs',
-				onMove(e) {
-					const rect = el.getBoundingClientRect();
-
-					const x = e.clientX - rect.left;
-					const y = e.clientY - rect.top;
-
-					const EDGE_RATIO = 0.3;
-
-					const left = rect.width * EDGE_RATIO;
-					const right = rect.width * (1 - EDGE_RATIO);
-					const top = rect.height * EDGE_RATIO;
-					const bottom = rect.height * (1 - EDGE_RATIO);
-
-					const horizontal = x < left ? 'left' : x > right ? 'right' : 'center';
-
-					const vertical = y < top ? 'top' : y > bottom ? 'bottom' : 'center';
-
-					return { horizontal, vertical };
-				}
-			}))}
+			{@const droppable = new DroppableTab(ctx.dnd)}
+			{@const draggable = new DraggableTab(ctx.dnd, () => t)}
 			<button
+				{@attach droppable.register}
+				{@attach draggable.register}
 				class="tab-header"
 				role="tab"
 				onclick={() => (tile.selectedTab = i)}
+				data-dragged={draggable.isDragged}
 				data-over={droppable.isOver}
 				data-selected={tile.selectedTab === i}
-				data-horizontal={droppable.meta?.horizontal}
-				data-vertical={droppable.meta?.vertical}
+				data-horizontal={droppable.horizontal}
+				data-vertical={droppable.vertical}
 			>
 				{@render tabHeader(tile, i)}
 			</button>

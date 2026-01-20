@@ -7,19 +7,18 @@ type WithTarget<E extends UIEvent> = E & {
 
 export type PointerEventWithTarget = WithTarget<PointerEvent>;
 
-const INTERNALS = Symbol();
+const ON_ENTER = Symbol('on-enter-key');
+const ON_MOVE = Symbol('on-move-key');
+const ON_LEAVE = Symbol('on-leave-key');
+const ON_DROP = Symbol('on-drop-key');
 
 export class DndContext<D = unknown> {
 	sourceId: string | undefined = $state.raw();
 	targetId: string | undefined = $state.raw();
 	draggables = new SvelteMap<string, Draggable<D>>();
-	droppables = new SvelteMap<string, Droppable<D, any, any>>();
+	droppables = new SvelteMap<string, Droppable<D, any>>();
 
-	findDroppable(
-		draggable: Draggable<D>,
-		{ clientX: x, clientY: y }: PointerEvent
-	): Droppable<D, any, any> | undefined {
-		const data = draggable.data;
+	findDroppable(x: number, y: number, data: D | undefined): Droppable<D, any> | undefined {
 		const isDataDefined = data !== undefined;
 		for (const d of this.droppables.values()) {
 			if (d.element === undefined) {
@@ -43,21 +42,32 @@ export interface StopEvent {
 }
 
 export class Draggable<D = unknown> {
-	id = crypto.randomUUID();
+	protected _disposePointerDownListener: (() => void) | undefined;
 
-	#disposePointerDownListener: (() => void) | undefined;
+	id = crypto.randomUUID();
 
 	constructor(
 		protected readonly ctx: DndContext<D>,
 		protected readonly dataRef?: () => D
-	) {}
-
-	get data() {
-		return this.dataRef?.();
+	) {
+		this.register = this.register.bind(this);
 	}
 
 	get isDragged() {
 		return this.ctx.sourceId === this.id;
+	}
+
+	register(el: HTMLElement) {
+		this.ctx.draggables.set(this.id, this);
+		this._disposePointerDownListener = on(el, 'pointerdown', (e) => this.pointerDownHandler(el, e));
+		return () => {
+			this[Symbol.dispose]();
+		};
+	}
+
+	[Symbol.dispose]() {
+		this._disposePointerDownListener?.();
+		this.ctx.draggables.delete(this.id);
 	}
 
 	protected feedback(
@@ -73,19 +83,6 @@ export class Draggable<D = unknown> {
 
 	protected onStop(_e: StopEvent) {}
 
-	[Symbol.dispose]() {
-		this.#disposePointerDownListener?.();
-		this.ctx.draggables.delete(this.id);
-	}
-
-	register = (el: HTMLElement) => {
-		this.ctx.draggables.set(this.id, this);
-		this.#disposePointerDownListener = on(el, 'pointerdown', (e) => this.pointerDownHandler(el, e));
-		return () => {
-			this[Symbol.dispose]();
-		};
-	};
-
 	protected pointerDownHandler(el: HTMLElement, e: PointerEventWithTarget) {
 		if (e.button !== 0) {
 			return;
@@ -100,21 +97,22 @@ export class Draggable<D = unknown> {
 		const feedback = this.feedback(el, e);
 
 		this.onStart(e);
+		const data = this.dataRef?.();
 
-		let activeDroppable: Droppable<D, any, any> | undefined;
+		let activeDroppable: Droppable<D, any> | undefined;
 		const handleMove = (e: PointerEvent) => {
 			this.onMove(e);
 
 			feedback?.onMove(e);
 
-			const nextDroppable = this.ctx.findDroppable(this, e);
+			const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, data);
 			if (activeDroppable !== nextDroppable) {
-				activeDroppable?.[INTERNALS].onLeave?.();
-				nextDroppable?.[INTERNALS].onEnter?.();
+				activeDroppable?.[ON_LEAVE]();
+				nextDroppable?.[ON_ENTER]();
 				activeDroppable = nextDroppable;
 				this.ctx.targetId = activeDroppable?.id;
 			}
-			activeDroppable?.[INTERNALS].onMove?.(e);
+			activeDroppable?.[ON_MOVE](e);
 		};
 
 		const handleStop = (ev: StopEvent) => {
@@ -122,9 +120,9 @@ export class Draggable<D = unknown> {
 			abortController.abort();
 
 			if (ev.reason === 'drop') {
-				activeDroppable?.[INTERNALS].onDrop?.(this.data as D);
+				activeDroppable?.[ON_DROP](data as D);
 			}
-			activeDroppable?.[INTERNALS].onLeave?.();
+			activeDroppable?.[ON_LEAVE]();
 			this.ctx.targetId = undefined;
 
 			feedback?.onStop(ev);
@@ -146,85 +144,63 @@ export class Draggable<D = unknown> {
 	}
 }
 
-export interface DroppableOptions<D, T extends D, M> {
-	accepts?: (data: D) => data is T;
-	onEnter?: () => M;
-	onMove?: (e: PointerEvent) => M;
-	onLeave?: () => M;
-	onDrop?: (data: T) => M;
-}
-
-export class Droppable<D, T extends D, M> {
-	#element: HTMLElement | undefined = $state.raw();
-	#options: DroppableOptions<D, T, M> = {};
-	#meta: M | undefined = $state.raw();
+export class Droppable<D = unknown, T extends D = D> {
+	protected _element: HTMLElement | undefined = $state.raw();
 
 	readonly id = crypto.randomUUID();
-	readonly [INTERNALS]: Required<Omit<DroppableOptions<D, T, void>, 'accepts'>> = {
-		onDrop: (data) => {
-			if (this.#options.onDrop) {
-				this.#meta = this.#options.onDrop(data);
-			}
-		},
-		onEnter: () => {
-			if (this.#options.onEnter) {
-				this.#meta = this.#options.onEnter();
-			}
-		},
-		onLeave: () => {
-			if (this.#options.onLeave) {
-				this.#meta = this.#options.onLeave();
-			}
-		},
-		onMove: (e) => {
-			if (this.#options.onMove) {
-				this.#meta = this.#options.onMove(e);
-			}
-		}
-	};
 
-	constructor(
-		protected readonly ctx: DndContext<D>,
-		protected readonly optionsOrFactory:
-			| DroppableOptions<D, T, M>
-			| ((el: HTMLElement) => DroppableOptions<D, T, M>)
-	) {}
-
-	get accepts() {
-		return this.#options.accepts;
+	constructor(protected readonly ctx: DndContext<D>) {
+		this.register = this.register.bind(this);
 	}
 
 	get element() {
-		return this.#element;
+		return this._element;
 	}
 
 	get isOver() {
 		return this.ctx.targetId === this.id;
 	}
 
-	get meta() {
-		return this.#meta;
-	}
-
 	[Symbol.dispose]() {
-		this.#element = undefined;
+		this._element = undefined;
 		this.ctx.droppables.delete(this.id);
 	}
 
-	register = (el: HTMLElement) => {
+	register(el: HTMLElement) {
 		this.ctx.droppables.set(this.id, this);
-		this.#element = el;
+		this._element = el;
 		return () => {
 			this[Symbol.dispose]();
 		};
-	};
-
-	protected setInternals(el: HTMLElement) {
-		this.#options =
-			typeof this.optionsOrFactory === 'function'
-				? this.optionsOrFactory(el)
-				: this.optionsOrFactory;
 	}
+
+	accepts(data: D): data is T {
+		return true;
+	}
+
+	[ON_ENTER]() {
+		this.onEnter();
+	}
+
+	[ON_MOVE](e: PointerEvent) {
+		this.onMove(e);
+	}
+
+	[ON_LEAVE]() {
+		this.onLeave();
+	}
+
+	[ON_DROP](data: T) {
+		this.onDrop(data);
+	}
+
+	protected onEnter() {}
+
+	protected onMove(_e: PointerEvent) {}
+
+	protected onLeave() {}
+
+	protected onDrop(_data: T) {}
 }
 
 export class ClonedGhost {
