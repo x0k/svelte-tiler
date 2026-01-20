@@ -81,13 +81,6 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
-			{@const draggable = new Draggable(ctx.dnd, {
-				data: createTabs({
-					...tile,
-					tabs: [[tile.titles[i], t]]
-				}),
-				feedback: (el, e) => new ClonedGhost(el, e).attach()
-			})}
 			{@const droppable = new Droppable(ctx.dnd, (el) => ({
 				accepts: (t): t is Tiles['tabs'] => t.type === 'tabs',
 				onMove(e) {
@@ -111,13 +104,10 @@
 				}
 			}))}
 			<button
-				{@attach draggable.register}
-				{@attach draggable.register}
 				class="tab-header"
 				role="tab"
 				onclick={() => (tile.selectedTab = i)}
 				data-over={droppable.isOver}
-				data-dragged={draggable.isDragged}
 				data-selected={tile.selectedTab === i}
 				data-horizontal={droppable.meta?.horizontal}
 				data-vertical={droppable.meta?.vertical}
