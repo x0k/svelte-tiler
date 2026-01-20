@@ -115,7 +115,7 @@
 		}
 	}
 	class DraggableTab extends Draggable {
-		protected feedback(el: HTMLElement, e: PointerEventWithTarget) {
+		protected feedback(el: HTMLElement, e: PointerEvent) {
 			return new ClonedGhost(el, e).attach();
 		}
 	}

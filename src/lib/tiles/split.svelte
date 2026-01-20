@@ -116,8 +116,8 @@
 			this.index = index;
 		}
 
-		protected onStart(e: PointerEventWithTarget): void {
-			this.resizerEl = e.currentTarget;
+		protected onStart(el: HTMLElement, e: PointerEvent): void {
+			this.resizerEl = el;
 			this.containerSize = this.isRow ? splitEl.clientWidth : splitEl.clientHeight;
 
 			this.currentDir = 0;

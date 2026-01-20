@@ -42,7 +42,9 @@ export interface StopEvent {
 }
 
 export class Draggable<D = unknown> {
-	protected _disposePointerDownListener: (() => void) | undefined;
+	protected _disposePointerDownHandler: (() => void) | undefined;
+	protected _disposeClickHandler: (() => void) | undefined;
+	protected didDrag = false;
 
 	id = crypto.randomUUID();
 
@@ -59,48 +61,82 @@ export class Draggable<D = unknown> {
 
 	register(el: HTMLElement) {
 		this.ctx.draggables.set(this.id, this);
-		this._disposePointerDownListener = on(el, 'pointerdown', (e) => this.pointerDownHandler(el, e));
+		this._disposePointerDownHandler = on(el, 'pointerdown', (e) => this.pointerDownHandler(e));
+		this._disposeClickHandler = on(
+			el,
+			'click',
+			(e) => {
+				if (!this.didDrag) {
+					return;
+				}
+				e.stopImmediatePropagation();
+				e.preventDefault();
+				this.didDrag = false;
+			},
+			{ capture: true }
+		);
 		return () => {
 			this[Symbol.dispose]();
 		};
 	}
 
 	[Symbol.dispose]() {
-		this._disposePointerDownListener?.();
+		this._disposeClickHandler?.();
+		this._disposePointerDownHandler?.();
 		this.ctx.draggables.delete(this.id);
 	}
 
 	protected feedback(
 		_el: HTMLElement,
-		_e: PointerEventWithTarget
+		_e: PointerEvent
 	): { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void } | undefined {
 		return undefined;
 	}
 
-	protected onStart(_e: PointerEventWithTarget) {}
+	protected onStart(_el: HTMLElement, _e: PointerEvent) {}
 
 	protected onMove(_e: PointerEvent) {}
 
 	protected onStop(_e: StopEvent) {}
 
-	protected pointerDownHandler(el: HTMLElement, e: PointerEventWithTarget) {
-		if (e.button !== 0) {
+	protected pointerDownHandler(event: PointerEventWithTarget) {
+		if (event.button !== 0 || !event.isPrimary) {
 			return;
 		}
 
-		el.setPointerCapture(e.pointerId);
+		const el = event.currentTarget;
+
+		el.setPointerCapture(event.pointerId);
 
 		const abortController = new AbortController();
 
-		this.ctx.sourceId = this.id;
-
-		const feedback = this.feedback(el, e);
-
-		this.onStart(e);
-		const data = this.dataRef?.();
+		let feedback:
+			| {
+					onMove: (e: PointerEvent) => void;
+					onStop: (e: StopEvent) => void;
+			  }
+			| undefined;
+		let data: D | undefined;
 
 		let activeDroppable: Droppable<D, any> | undefined;
 		const handleMove = (e: PointerEvent) => {
+			if (e.pointerId !== event.pointerId) {
+				return;
+			}
+
+			if (!this.didDrag) {
+				const dx = e.clientX - event.clientX;
+				const dy = e.clientY - event.clientY;
+				if (dx * dx + dy * dy < 16) {
+					return;
+				}
+				this.didDrag = true;
+				this.ctx.sourceId = this.id;
+				feedback = this.feedback(el, e);
+				this.onStart(el, e);
+				data = this.dataRef?.();
+			}
+
 			this.onMove(e);
 
 			feedback?.onMove(e);
@@ -116,8 +152,12 @@ export class Draggable<D = unknown> {
 		};
 
 		const handleStop = (ev: StopEvent) => {
-			el.releasePointerCapture(e.pointerId);
+			el.releasePointerCapture(event.pointerId);
 			abortController.abort();
+
+			if (!this.didDrag) {
+				return;
+			}
 
 			if (ev.reason === 'drop') {
 				activeDroppable?.[ON_DROP](data as D);
@@ -138,7 +178,16 @@ export class Draggable<D = unknown> {
 		}
 
 		window.addEventListener('pointermove', handleMove, abortController);
-		window.addEventListener('pointerup', () => handleStop({ reason: 'drop' }), abortController);
+		window.addEventListener(
+			'pointerup',
+			(e) => {
+				if (e.pointerId !== event.pointerId) {
+					return;
+				}
+				handleStop({ reason: 'drop' });
+			},
+			abortController
+		);
 		window.addEventListener('keydown', onKeydown, abortController);
 		window.addEventListener('contextmenu', () => handleStop({ reason: 'cancel' }), abortController);
 	}
@@ -208,11 +257,11 @@ export class ClonedGhost {
 	#offsetX: number;
 	#offsetY: number;
 
-	constructor(element: HTMLElement, event: PointerEventWithTarget) {
-		const rect = element.getBoundingClientRect();
-		this.#element = element.cloneNode(true) as HTMLElement;
-		this.#offsetX = event.clientX - rect.left;
-		this.#offsetY = event.clientY - rect.top;
+	constructor(el: HTMLElement, e: PointerEvent) {
+		const rect = el.getBoundingClientRect();
+		this.#element = el.cloneNode(true) as HTMLElement;
+		this.#offsetX = e.clientX - rect.left;
+		this.#offsetY = e.clientY - rect.top;
 
 		this.#element.style.position = 'fixed';
 		this.#element.style.left = '0';
@@ -222,7 +271,7 @@ export class ClonedGhost {
 		this.#element.style.pointerEvents = 'none';
 		this.#element.style.zIndex = '9999';
 		this.#element.style.opacity = '0.85';
-		this.onMove(event);
+		this.onMove(e);
 	}
 
 	attach(root = document.body) {
