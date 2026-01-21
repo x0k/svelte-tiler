@@ -81,11 +81,11 @@
 	const selectedTile = $derived(tile.children[tile.selectedTab] satisfies Tile as Tile | undefined);
 	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
 
-	const EDGE_RATIO = 0.3;
+	const EDGE_RATIO = 0.25;
 
 	class DroppableSurface extends Droppable<Tile> {
-		horizontal: EdgePart | undefined = $state.raw();
-		vertical: EdgePart | undefined = $state.raw();
+		hpart: EdgePart | undefined = $state.raw();
+		vpart: EdgePart | undefined = $state.raw();
 
 		accepts(t: Tile | undefined): t is Tiles['tabs'] {
 			return t?.type === 'tabs';
@@ -106,10 +106,14 @@
 		}
 
 		protected onDrop({ titles, children }: Tiles['tabs']): void {
-			const i = this.#index + (this.horizontal === 'start' ? 0 : 1);
+			const i = this.#index + (this.hpart === 'start' ? 0 : 1);
 			tile.children.splice(i, 0, ...children);
 			tile.titles.splice(i, 0, ...titles);
 		}
+	}
+
+	class DroppableContent extends DroppableSurface {
+		protected onDrop({ titles, children }: Tiles['tabs']): void {}
 	}
 
 	interface DraggableTabOptions extends DraggableOptions<Tile> {
@@ -143,7 +147,7 @@
 		private getIndex() {
 			const c = tile.children;
 			const i = this.#index;
-			if (i - 1 < c.length && c[i + 1].id === this.#id) {
+			if (i + 1 < c.length && c[i + 1].id === this.#id) {
 				return i + 1;
 			}
 			if (i > 0 && c[i - 1].id === this.#id) {
@@ -152,6 +156,8 @@
 			return i;
 		}
 	}
+
+	const droppableContent = $derived(new DroppableContent(ctx.dnd));
 </script>
 
 {#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}
@@ -179,14 +185,21 @@
 				data-dragged={draggable.isDragged}
 				data-over={droppable.isOver}
 				data-selected={tile.selectedTab === i}
-				data-horizontal={droppable.horizontal}
-				data-vertical={droppable.vertical}
+				data-hpart={droppable.hpart}
+				data-vpart={droppable.vpart}
 			>
 				{@render tabHeader(tile, i)}
 			</button>
 		{/each}
 	</div>
-	<div class="tab-content">
+	<div
+		class="tab-content"
+		{@attach droppableContent.register}
+		data-over={droppableContent.isOver}
+		data-hpart={droppableContent.hpart}
+		data-vpart={droppableContent.vpart}
+		style="--drop-edge-size: {EDGE_RATIO * 100}%"
+	>
 		{#if TileComponent}
 			<TileComponent bind:tile={tile.children[tile.selectedTab] as never} />
 		{:else}

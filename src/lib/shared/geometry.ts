@@ -19,7 +19,7 @@ export function getEdgePart(a: number, b: number, x: number, ratio: number): Edg
 
 export function getRectParts(rect: DOMRect, x: number, y: number, ratio: number) {
 	return {
-		horizontal: getEdgePart(rect.left, rect.right, x, ratio),
-		vertical: getEdgePart(rect.top, rect.bottom, y, ratio)
+		hpart: getEdgePart(rect.left, rect.right, x, ratio),
+		vpart: getEdgePart(rect.top, rect.bottom, y, ratio)
 	};
 }

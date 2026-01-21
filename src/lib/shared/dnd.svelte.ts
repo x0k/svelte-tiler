@@ -183,7 +183,7 @@ export class Draggable<D = unknown> {
 				if (e.pointerId !== event.pointerId) {
 					return;
 				}
-				handleStop({ reason: 'drop' });
+				handleStop({ reason: activeDroppable === undefined ? 'cancel' : 'drop' });
 			},
 			abortController
 		);
