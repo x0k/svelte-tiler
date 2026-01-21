@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { fromConstant } from '$lib/shared/registry.js';
 	import type { Tiles } from '$lib/tile.js';
-	import type { TilerComponents } from '$lib/context.js';
+	import { createTilerContext, setTilerContext } from '$lib/context.js';
 	import Split, { createColumn, createRow, createSplit } from '$lib/tiles/split.svelte';
 	import Leaf, { setupLeafs } from '$lib/tiles/leaf.svelte';
 	import Tabs, { createTabs } from '$lib/tiles/tabs.svelte';
-	import Tiler from '$lib/tiler.svelte';
+	import Panel from '$lib/panel.svelte';
 
-	const components: TilerComponents = { split: Split, leaf: Leaf, tabs: Tabs };
+	setTilerContext(
+		createTilerContext({
+			components: { split: Split, leaf: Leaf, tabs: Tabs }
+		})
+	);
 
 	const leaf = setupLeafs(fromConstant(test));
 	let split = $state(
@@ -37,10 +41,10 @@
 
 <div class="mx-auto flex w-full max-w-200 flex-col gap-4 p-4">
 	<div class="tiler h-100 rounded-md border">
-		<Tiler bind:tile={split} {components} />
+		<Panel bind:layout={split} />
 	</div>
 	<div class="tiler h-100 rounded-md border">
-		<Tiler bind:tile={tabs} {components} />
+		<Panel bind:layout={tabs} />
 	</div>
 </div>
 

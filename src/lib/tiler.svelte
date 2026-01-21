@@ -1,25 +1,11 @@
 <script lang="ts">
-	import { DndContext } from './shared/dnd.svelte.ts';
-	import { TILER_COMPONENTS } from './internal.js';
-	import {
-		getTileComponent,
-		setTilerContext,
-		type TilerComponents,
-		type TilerContext
-	} from './context.js';
+	import { createTilerContext, setTilerContext, type TilerContextOptions } from './context.js';
 	import type { Tile } from './tile.js';
+	import Panel from './panel.svelte';
 
-	let { tile = $bindable(), components }: { tile: Tile; components: TilerComponents } = $props();
+	let { layout = $bindable(), ...rest }: { layout: Tile } & TilerContextOptions = $props();
 
-	const ctx: TilerContext = {
-		get [TILER_COMPONENTS]() {
-			return components;
-		},
-		dnd: new DndContext()
-	};
-	setTilerContext(ctx);
-
-	const TileComponent = $derived(getTileComponent(ctx, tile));
+	setTilerContext(createTilerContext(rest));
 </script>
 
-<TileComponent bind:tile={tile as never} />
+<Panel bind:layout />
