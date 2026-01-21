@@ -1,19 +1,25 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { on } from 'svelte/events';
 
+import type { MutableRegistry } from './registry.ts';
+
 const ON_ENTER = Symbol('on-enter-key');
 const ON_MOVE = Symbol('on-move-key');
 const ON_LEAVE = Symbol('on-leave-key');
 const ON_DROP = Symbol('on-drop-key');
 
 export class DndContext<D = unknown> {
+	#droppables = new SvelteMap<string, Droppable<D, any>>();
+
 	sourceId: string | undefined = $state.raw();
 	targetId: string | undefined = $state.raw();
-	draggables = new SvelteMap<string, Draggable<D>>();
-	droppables = new SvelteMap<string, Droppable<D, any>>();
+
+	get droppables(): MutableRegistry<string, Droppable<D, any> | undefined> {
+		return this.#droppables;
+	}
 
 	findDroppable(x: number, y: number, data: D | undefined): Droppable<D, any> | undefined {
-		for (const d of this.droppables.values()) {
+		for (const d of this.#droppables.values()) {
 			if (d.element === undefined) {
 				continue;
 			}
@@ -57,7 +63,6 @@ export class Draggable<D = unknown> {
 	}
 
 	register(el: HTMLElement) {
-		this.ctx.draggables.set(this.id, this);
 		this.#disposePointerDownHandler = on(el, 'pointerdown', (e) => this.pointerDownHandler(e));
 		this.#disposeClickHandler = on(
 			el,
@@ -80,7 +85,6 @@ export class Draggable<D = unknown> {
 	[Symbol.dispose]() {
 		this.#disposeClickHandler?.();
 		this.#disposePointerDownHandler?.();
-		this.ctx.draggables.delete(this.id);
 	}
 
 	protected feedback(
@@ -158,15 +162,18 @@ export class Draggable<D = unknown> {
 				return;
 			}
 
-			if (ev.reason === 'drop') {
-				activeDroppable?.[ON_DROP](this.options?.data);
-			}
+			const snap = ev.reason === 'drop' ? $state.snapshot(this.options?.data) : undefined;
 			activeDroppable?.[ON_LEAVE]();
-			this.ctx.targetId = undefined;
 
 			feedback?.onStop(ev);
 
 			this.onStop(ev);
+
+			if (ev.reason === 'drop') {
+				activeDroppable?.[ON_DROP](snap);
+			}
+
+			this.ctx.targetId = undefined;
 			this.ctx.sourceId = undefined;
 		};
 

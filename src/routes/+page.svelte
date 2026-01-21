@@ -1,22 +1,26 @@
 <script lang="ts">
 	import { fromConstant } from '$lib/shared/registry.js';
-	import type { Tiles } from '$lib/tile.js';
+	import type { Tiles } from '$lib/model.js';
 	import { createTilerContext, setTilerContext } from '$lib/context.js';
-	import Split, { createColumn, createRow, createSplit } from '$lib/tiles/split.svelte';
-	import Leaf, { setupLeafs } from '$lib/tiles/leaf.svelte';
-	import Tabs, { createTabs } from '$lib/tiles/tabs.svelte';
+	import * as Split from '$lib/tiles/split.svelte';
+	import * as Leaf from '$lib/tiles/leaf.svelte';
+	import * as Tabs from '$lib/tiles/tabs.svelte';
 	import Panel from '$lib/panel.svelte';
 
 	setTilerContext(
 		createTilerContext({
-			components: { split: Split, leaf: Leaf, tabs: Tabs }
+			tiles: { split: Split, leaf: Leaf, tabs: Tabs }
 		})
 	);
 
-	const leaf = setupLeafs(fromConstant(test));
+	const leaf = Leaf.setupLeafs(fromConstant(test));
+	const createTabs = Tabs.setupTabs({
+		// createRow,
+		// createColumn
+	});
 	let split = $state(
-		createSplit({
-			children: [leaf('foo'), leaf('bar'), createColumn(leaf('foo'), leaf('bar'))],
+		Split.createSplit({
+			children: [leaf('foo'), leaf('bar'), Split.createColumn(leaf('foo'), leaf('bar'))],
 			constraints: [
 				{},
 				{
@@ -27,24 +31,22 @@
 		})
 	);
 	let tabs = $state(
-		createRow(
-			createTabs({
-				tabs: [
-					['foo', leaf('foo')],
-					['bar', leaf('bar')],
-					['baz', leaf('baz')]
-				]
-			})
-		)
+		createTabs({
+			tabs: [
+				['foo', leaf('foo')],
+				['bar', leaf('bar')],
+				['baz', leaf('baz')]
+			]
+		})
 	);
 </script>
 
 <div class="mx-auto flex w-full max-w-200 flex-col gap-4 p-4">
 	<div class="tiler h-100 rounded-md border">
-		<Panel bind:layout={split} />
+		<Panel bind:tile={split} />
 	</div>
 	<div class="tiler h-100 rounded-md border">
-		<Panel bind:layout={tabs} />
+		<Panel bind:tile={tabs} />
 	</div>
 </div>
 

@@ -2,9 +2,9 @@
 	import { createContext, type Snippet } from 'svelte';
 
 	import type { Registry } from '$lib/shared/registry.js';
-	import type { TileProps, Tiles } from '$lib/tile.js';
+	import type { TileProps, Tiles } from '$lib/model.js';
 
-	declare module '../tile.js' {
+	declare module '../model.js' {
 		interface TileRegistry {
 			leaf: {
 				name: string;
@@ -25,6 +25,8 @@
 			children: []
 		});
 	}
+
+	export function unmount() {}
 </script>
 
 <script lang="ts">

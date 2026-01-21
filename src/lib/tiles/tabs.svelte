@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { getContext, setContext, type Snippet } from 'svelte';
+	import { createContext, type Snippet } from 'svelte';
 
 	import {
 		ClonedGhost,
@@ -11,10 +11,10 @@
 	} from '$lib/shared/dnd.svelte.js';
 	import type { Registry } from '$lib/shared/registry.js';
 	import { getRectParts, type EdgePart } from '$lib/shared/geometry.js';
-	import { getTileComponent, getTilerContext } from '$lib/context.js';
-	import type { Tile, Tiles } from '$lib/tile.js';
+	import { getTilerContext } from '$lib/context.js';
+	import type { Tile, TileProps, Tiles } from '$lib/model.js';
 
-	declare module '../tile.js' {
+	declare module '../model.js' {
 		interface TileRegistry {
 			tabs: {
 				titles: string[];
@@ -32,7 +32,7 @@
 		empty?: E;
 	}
 
-	export function createTabs<H extends string, E extends string>(
+	function createTabs<H extends string, E extends string>(
 		options: TabsOptions<H, E>
 	): Tiles['tabs'] {
 		const children: Tile[] = [];
@@ -52,24 +52,30 @@
 		};
 	}
 
-	const TABS_CONTEXT_KEY = Symbol('tabs-context-key');
-
 	interface TabsContext<H extends string = string, E extends string = string> {
+		// createRow: (a: Tiles['tabs'], b: Tiles['tabs']) => Tile;
+		// createColumn: (a: Tiles['tabs'], b: Tiles['tabs']) => Tile;
 		headers?: Registry<H, Snippet<[Tiles['tabs'], number]> | undefined>;
 		empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
 	}
+	const [getTabsContext, setTabsContext] = createContext<TabsContext>();
 
 	export function setupTabs<H extends string, E extends string>(ctx: TabsContext<H, E>) {
-		setContext(TABS_CONTEXT_KEY, ctx);
+		setTabsContext(ctx);
 		return createTabs<H, E>;
+	}
+
+	export function unmount(tile: Tiles['tabs'], i: number) {
+		tile.children.splice(i, i);
+		tile.titles.splice(i, i);
 	}
 </script>
 
 <script lang="ts">
-	const { tile = $bindable() }: { tile: Tiles['tabs'] } = $props();
+	let { tile = $bindable(), unmount, child }: TileProps<'tabs'> = $props();
 
 	const ctx = getTilerContext();
-	const tabsCtx = getContext<TabsContext | undefined>(TABS_CONTEXT_KEY);
+	const tabsCtx = getTabsContext();
 
 	const tabHeader = $derived(
 		(tile.tabHeader !== undefined && tabsCtx?.headers?.get(tile.tabHeader)) || defaultTabHeader
@@ -77,9 +83,6 @@
 	const empty = $derived(
 		(tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
 	);
-
-	const selectedTile = $derived(tile.children[tile.selectedTab] satisfies Tile as Tile | undefined);
-	const TileComponent = $derived(selectedTile && getTileComponent(ctx, selectedTile));
 
 	const EDGE_RATIO = 0.25;
 
@@ -113,7 +116,26 @@
 	}
 
 	class DroppableContent extends DroppableSurface {
-		protected onDrop({ titles, children }: Tiles['tabs']): void {}
+		protected onDrop(tabs: Tiles['tabs']): void {
+			if (tabs.children.length < 1) {
+				return;
+			}
+			const id = tabs.children[0].id;
+			if (this.hpart === 'center' && this.vpart === 'center') {
+				const i = tile.children.findIndex((t) => t.id === id);
+				if (i < 0) {
+					const l = tile.children.push(...tabs.children);
+					tile.titles.push(...tabs.titles);
+					tile.selectedTab = l - 1;
+				} else {
+					tile.children.splice(i, 0, ...tabs.children);
+					tile.titles.splice(i, 0, ...tabs.titles);
+					tile.selectedTab = i;
+				}
+			} else if (this.hpart === 'start') {
+				// replace(tabsCtx.createRow(tabs, tile));
+			}
+		}
 	}
 
 	interface DraggableTabOptions extends DraggableOptions<Tile> {
@@ -139,9 +161,13 @@
 			if (reason !== 'drop') {
 				return;
 			}
-			const index = this.getIndex();
-			tile.children.splice(index, 1);
-			tile.titles.splice(index, 1);
+			if (tile.children.length === 1) {
+				unmount();
+			} else {
+				const index = this.getIndex();
+				tile.children.splice(index, 1);
+				tile.titles.splice(index, 1);
+			}
 		}
 
 		private getIndex() {
@@ -200,8 +226,8 @@
 		data-vpart={droppableContent.vpart}
 		style="--drop-edge-size: {EDGE_RATIO * 100}%"
 	>
-		{#if TileComponent}
-			<TileComponent bind:tile={tile.children[tile.selectedTab] as never} />
+		{#if tile.children[tile.selectedTab]}
+			{@render child(tile.selectedTab)}
 		{:else}
 			{@render empty?.(tile)}
 		{/if}

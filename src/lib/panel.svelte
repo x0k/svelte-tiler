@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { getTileComponent, getTilerContext } from './context.js';
-	import type { Tile } from './tile.js';
+	import Render from './render.svelte';
+	import type { Tile } from './model.ts';
 
-	let { layout = $bindable() }: { layout: Tile } = $props();
-
-	const ctx = getTilerContext();
-
-	const TileComponent = $derived(getTileComponent(ctx, layout));
+	let { tile = $bindable() }: { tile: Tile | undefined } = $props();
 </script>
 
-<TileComponent bind:tile={layout as never} />
+{#if tile}
+	<Render
+		bind:tile
+		unmount={() => (tile = undefined)}
+		bind:parent={() => undefined, (t) => (tile = t)}
+		index={0}
+	/>
+{/if}

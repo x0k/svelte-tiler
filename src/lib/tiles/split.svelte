@@ -3,9 +3,7 @@
 
 	import type { Registry } from '$lib/shared/registry.js';
 	import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
-	import { getTileComponent, getTilerContext } from '$lib/context.js';
-
-	import type { Tile, Tiles } from '../tile.js';
+	import type { Tile, TileProps, Tiles } from '$lib/model.js';
 
 	export type Direction = 'row' | 'column';
 
@@ -15,7 +13,7 @@
 		maxWeight: number;
 	}
 
-	declare module '../tile.js' {
+	declare module '../model.js' {
 		interface TileRegistry {
 			split: {
 				constraints: TileConstraints[];
@@ -81,12 +79,16 @@
 		setContext(SPLIT_CONTEXT_KEY, ctx);
 		return createSplit<R>;
 	}
+
+	export function unmount(tile: Tiles['split'], index: number) {
+		tile.children.splice(index, 1);
+		tile.constraints.splice(index, 1);
+	}
 </script>
 
 <script lang="ts">
-	const { tile = $bindable() }: { tile: Tiles['split'] } = $props();
+	let { tile = $bindable(), child }: TileProps<'split'> = $props();
 
-	const ctx = getTilerContext();
 	const splitCtx = getContext<SplitContext | undefined>(SPLIT_CONTEXT_KEY);
 	const dndCtx = new DndContext();
 
@@ -219,7 +221,6 @@
 
 <div bind:this={splitEl} class="split" style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
-		{@const Component = getTileComponent(ctx, t)}
 		{@const draggable = new DraggableResizer(dndCtx, i)}
 		<div class="item" style="--grow: {tile.constraints[i].weight}">
 			{#if i > 0}
@@ -227,7 +228,7 @@
 					{@render resizerSnippet?.(draggable, tile, i)}
 				</div>
 			{/if}
-			<Component bind:tile={tile.children[i] as never} />
+			{@render child(i)}
 		</div>
 	{/each}
 </div>
