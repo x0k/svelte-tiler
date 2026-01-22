@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { fromConstant } from '$lib/shared/registry.js';
-	import type { Tiles } from '$lib/model.js';
-	import { createTilerContext, setTilerContext } from '$lib/context.js';
+	import { marked } from 'marked';
+
+	import readmeMd from '../../README.md?raw';
+
+	import { fromRecord } from '$lib/shared/registry.js';
+	import { Tiler, type Tiles } from '$lib/index.js';
 	import * as Split from '$lib/tiles/split.svelte';
 	import * as Leaf from '$lib/tiles/leaf.svelte';
 	import * as Tabs from '$lib/tiles/tabs.svelte';
-	import Panel from '$lib/panel.svelte';
 
-	setTilerContext(
-		createTilerContext({
-			tiles: { split: Split, leaf: Leaf, tabs: Tabs }
+	import Sidebar from './sidebar.svelte';
+
+	const leaf = Leaf.setup(
+		fromRecord({
+			sidebar,
+			content
 		})
 	);
-
-	const leaf = Leaf.setup(fromConstant(test));
 	const createTabs = Tabs.setup({
 		createSplit({ parent, type, pivot, adjacent, offset }) {
 			if (parent?.type === 'split' && parent.direction === type) {
@@ -34,44 +37,31 @@
 			return next;
 		}
 	});
-	let split = $state(
+	let tile = $state(
 		Split.create({
-			children: [leaf('foo'), leaf('bar'), Split.createColumn(leaf('foo'), leaf('bar'))],
-			constraints: [
-				{},
-				{
-					maxWeight: 1
-				},
-				{}
-			]
-		})
-	);
-	let tabs = $state(
-		createTabs({
-			tabs: [
-				['foo', leaf('foo')],
-				['bar', leaf('bar')],
-				['baz', leaf('baz')]
-			]
+			direction: 'row',
+			children: [leaf('sidebar'), leaf('content')],
+			constraints: [{ minWeight: 0.1, weight: 0.2, maxWeight: 0.3 }, {}]
 		})
 	);
 </script>
 
-<div class="mx-auto flex w-full max-w-200 flex-col gap-4 p-4">
-	<div class="tiler h-100 rounded-md border">
-		<Panel bind:tile={split} />
-	</div>
-	<div class="tiler h-100 rounded-md border">
-		<Panel bind:tile={tabs} />
-	</div>
+<div class="h-screen w-full">
+	<Tiler bind:tile tiles={{ split: Split, leaf: Leaf, tabs: Tabs }} />
 </div>
 
-{#snippet test(tile: Tiles['leaf'])}
-	<p>{tile.name}</p>
+{#snippet sidebar()}
+	<Sidebar />
+{/snippet}
+
+{#snippet content()}
+	<div class="content">
+		{@html marked.parse(readmeMd)}
+	</div>
 {/snippet}
 
 <style>
-	:global .tiler {
+	:global {
 		.split {
 			--resizer-line-size: 1px;
 			--resizer-hit-size: 12px;

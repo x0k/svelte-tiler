@@ -20,7 +20,13 @@
 	<Self
 		bind:parent={tile}
 		bind:tile={tile.children[index]}
-		unmount={() => def.unmount(tile as never, index)}
+		unmount={() => {
+			if (tile.children.length === 1) {
+				unmount();
+			} else {
+				def.unmount(tile as never, index);
+			}
+		}}
 		{index}
 	/>
 {/snippet}

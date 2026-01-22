@@ -211,7 +211,8 @@
 				index: i,
 				data: create({
 					...tile,
-					tabs: [[tile.titles[i], t]]
+					tabs: [[tile.titles[i], t]],
+					selectedTab: 0
 				})
 			})}
 			<button
