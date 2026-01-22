@@ -53,7 +53,7 @@
 	interface SplitOptions {
 		type: 'row' | 'column';
 		parent: Tile | undefined;
-		tile: Tiles['tabs'];
+		pivot: Tiles['tabs'];
 		offset: number;
 		adjacent: Tiles['tabs'];
 	}
@@ -159,7 +159,7 @@
 				parent = tabsCtx.createSplit({
 					parent,
 					type: this.hpart === 'start' || this.hpart === 'end' ? 'row' : 'column',
-					tile,
+					pivot: tile,
 					adjacent: tabs,
 					offset:
 						this.hpart === 'start' ? 0 : this.hpart === 'end' ? 1 : this.vpart === 'start' ? 0 : 1
