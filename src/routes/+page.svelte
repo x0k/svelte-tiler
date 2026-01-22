@@ -15,8 +15,17 @@
 
 	const leaf = Leaf.setupLeafs(fromConstant(test));
 	const createTabs = Tabs.setupTabs({
-		// createRow,
-		// createColumn
+		createSplit({ parent, index, type, tile, adjacent, offset }) {
+			if (parent?.type === 'split' && parent.direction === type) {
+				parent.children.splice(index + offset, 0, adjacent);
+				parent.constraints.splice(index + offset, 0, { weight: 1, minWeight: 0.2, maxWeight: 0 });
+				return parent;
+			}
+			const tiles = new Array<Tiles['tabs']>(2);
+			tiles[offset] = adjacent;
+			tiles[1 - offset] = tile;
+			return (type === 'row' ? Split.createRow : Split.createColumn).apply(Split, tiles);
+		}
 	});
 	let split = $state(
 		Split.createSplit({

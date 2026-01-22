@@ -25,4 +25,4 @@
 	/>
 {/snippet}
 
-<def.default bind:tile={tile as never} {unmount} {parent} {index} {child} />
+<def.default bind:parent bind:tile={tile as never} {unmount} {index} {child} />

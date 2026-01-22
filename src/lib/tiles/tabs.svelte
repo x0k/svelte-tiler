@@ -52,9 +52,17 @@
 		};
 	}
 
+	interface SplitOptions {
+		type: 'row' | 'column';
+		parent: Tile | undefined;
+		index: number;
+		tile: Tiles['tabs'];
+		offset: number;
+		adjacent: Tiles['tabs'];
+	}
+
 	interface TabsContext<H extends string = string, E extends string = string> {
-		// createRow: (a: Tiles['tabs'], b: Tiles['tabs']) => Tile;
-		// createColumn: (a: Tiles['tabs'], b: Tiles['tabs']) => Tile;
+		createSplit: (options: SplitOptions) => Tile;
 		headers?: Registry<H, Snippet<[Tiles['tabs'], number]> | undefined>;
 		empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
 	}
@@ -72,7 +80,13 @@
 </script>
 
 <script lang="ts">
-	let { tile = $bindable(), unmount, child }: TileProps<'tabs'> = $props();
+	let {
+		tile = $bindable(),
+		parent = $bindable(),
+		index: tileIndex,
+		unmount,
+		child
+	}: TileProps<'tabs'> = $props();
 
 	const ctx = getTilerContext();
 	const tabsCtx = getTabsContext();
@@ -132,9 +146,16 @@
 					tile.titles.splice(i, 0, ...tabs.titles);
 					tile.selectedTab = i;
 				}
-			} else if (this.hpart === 'start') {
-				// replace(tabsCtx.createRow(tabs, tile));
 			}
+			parent = tabsCtx.createSplit({
+				parent,
+				type: this.hpart === 'start' || this.hpart === 'end' ? 'row' : 'column',
+				tile,
+				index: tileIndex,
+				adjacent: tabs,
+				offset:
+					this.hpart === 'start' ? 0 : this.hpart === 'end' ? 1 : this.vpart === 'start' ? 0 : 1
+			});
 		}
 	}
 
