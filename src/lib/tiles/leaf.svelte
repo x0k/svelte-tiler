@@ -16,7 +16,7 @@
 
 	const [getContext, setContext] = createContext<LeafContext>();
 
-	export function setupLeafs<N extends string>(leafs: LeafContext<N>) {
+	export function setup<N extends string>(leafs: LeafContext<N>) {
 		setContext(leafs);
 		return (name: N): Tiles['leaf'] => ({
 			id: crypto.randomUUID(),

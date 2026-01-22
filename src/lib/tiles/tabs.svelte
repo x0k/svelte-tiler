@@ -32,9 +32,7 @@
 		empty?: E;
 	}
 
-	function createTabs<H extends string, E extends string>(
-		options: TabsOptions<H, E>
-	): Tiles['tabs'] {
+	function create<H extends string, E extends string>(options: TabsOptions<H, E>): Tiles['tabs'] {
 		const children: Tile[] = [];
 		const titles: string[] = [];
 		for (const tab of options.tabs) {
@@ -55,7 +53,6 @@
 	interface SplitOptions {
 		type: 'row' | 'column';
 		parent: Tile | undefined;
-		index: number;
 		tile: Tiles['tabs'];
 		offset: number;
 		adjacent: Tiles['tabs'];
@@ -66,16 +63,17 @@
 		headers?: Registry<H, Snippet<[Tiles['tabs'], number]> | undefined>;
 		empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
 	}
+
 	const [getTabsContext, setTabsContext] = createContext<TabsContext>();
 
-	export function setupTabs<H extends string, E extends string>(ctx: TabsContext<H, E>) {
+	export function setup<H extends string, E extends string>(ctx: TabsContext<H, E>) {
 		setTabsContext(ctx);
-		return createTabs<H, E>;
+		return create<H, E>;
 	}
 
 	export function unmount(tile: Tiles['tabs'], i: number) {
-		tile.children.splice(i, i);
-		tile.titles.splice(i, i);
+		tile.children.splice(i, 1);
+		tile.titles.splice(i, 1);
 	}
 </script>
 
@@ -83,8 +81,7 @@
 	let {
 		tile = $bindable(),
 		parent = $bindable(),
-		index: tileIndex,
-		unmount,
+		unmount: destroy,
 		child
 	}: TileProps<'tabs'> = $props();
 
@@ -105,7 +102,11 @@
 		vpart: EdgePart | undefined = $state.raw();
 
 		accepts(t: Tile | undefined): t is Tiles['tabs'] {
-			return t?.type === 'tabs';
+			return (
+				t?.type === 'tabs' &&
+				// NOTE: In most cases `t.children.length === 1` is expected
+				(tile.children.length !== 1 || t.children.every((c) => c.id !== tile.children[0].id))
+			);
 		}
 
 		onMove(e: PointerEvent) {
@@ -115,15 +116,23 @@
 	}
 
 	class DroppableTab extends DroppableSurface {
-		#index: number;
+		#id: string;
 
-		constructor(ctx: DndContext<Tile>, index: number) {
+		constructor(ctx: DndContext<Tile>, id: string) {
 			super(ctx);
-			this.#index = index;
+			this.#id = id;
+		}
+
+		accepts(t: Tile | undefined): t is Tiles['tabs'] {
+			return super.accepts(t) && t.children.every((c) => c.id !== this.#id);
 		}
 
 		protected onDrop({ titles, children }: Tiles['tabs']): void {
-			const i = this.#index + (this.hpart === 'start' ? 0 : 1);
+			const index = tile.children.findIndex((c) => c.id === this.#id);
+			if (index < 0) {
+				return;
+			}
+			const i = index + (this.hpart === 'start' ? 0 : 1);
 			tile.children.splice(i, 0, ...children);
 			tile.titles.splice(i, 0, ...titles);
 		}
@@ -146,31 +155,28 @@
 					tile.titles.splice(i, 0, ...tabs.titles);
 					tile.selectedTab = i;
 				}
+			} else {
+				parent = tabsCtx.createSplit({
+					parent,
+					type: this.hpart === 'start' || this.hpart === 'end' ? 'row' : 'column',
+					tile,
+					adjacent: tabs,
+					offset:
+						this.hpart === 'start' ? 0 : this.hpart === 'end' ? 1 : this.vpart === 'start' ? 0 : 1
+				});
 			}
-			parent = tabsCtx.createSplit({
-				parent,
-				type: this.hpart === 'start' || this.hpart === 'end' ? 'row' : 'column',
-				tile,
-				index: tileIndex,
-				adjacent: tabs,
-				offset:
-					this.hpart === 'start' ? 0 : this.hpart === 'end' ? 1 : this.vpart === 'start' ? 0 : 1
-			});
 		}
 	}
 
 	interface DraggableTabOptions extends DraggableOptions<Tile> {
-		id: string;
 		index: number;
 	}
 
 	class DraggableTab extends Draggable<Tile> {
-		#id: string;
 		#index: number;
 
 		constructor(ctx: DndContext<Tile>, options: DraggableTabOptions) {
 			super(ctx, options);
-			this.#id = options.id;
 			this.#index = options.index;
 		}
 
@@ -183,24 +189,10 @@
 				return;
 			}
 			if (tile.children.length === 1) {
-				unmount();
+				destroy();
 			} else {
-				const index = this.getIndex();
-				tile.children.splice(index, 1);
-				tile.titles.splice(index, 1);
+				unmount(tile, this.#index);
 			}
-		}
-
-		private getIndex() {
-			const c = tile.children;
-			const i = this.#index;
-			if (i + 1 < c.length && c[i + 1].id === this.#id) {
-				return i + 1;
-			}
-			if (i > 0 && c[i - 1].id === this.#id) {
-				return i - 1;
-			}
-			return i;
 		}
 	}
 
@@ -214,11 +206,10 @@
 <div class="tabs">
 	<div class="tab-bar">
 		{#each tile.children as t, i (t.id)}
-			{@const droppable = new DroppableTab(ctx.dnd, i)}
+			{@const droppable = new DroppableTab(ctx.dnd, t.id)}
 			{@const draggable = new DraggableTab(ctx.dnd, {
-				id: t.id,
 				index: i,
-				data: createTabs({
+				data: create({
 					...tile,
 					tabs: [[tile.titles[i], t]]
 				})

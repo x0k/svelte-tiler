@@ -36,7 +36,7 @@
 
 	const empty = (): Partial<TileConstraints> => ({});
 
-	export function createSplit<R extends string>(options: SplitOptions<R>): Tiles['split'] {
+	export function create<R extends string>(options: SplitOptions<R>): Tiles['split'] {
 		const constraints: TileConstraints[] = (options.constraints ?? options.children.map(empty)).map(
 			({ weight = 1, minWeight = weight * 0.2, maxWeight = 0 }) => ({
 				weight,
@@ -56,14 +56,14 @@
 	}
 
 	export function createRow(...children: Tile[]) {
-		return createSplit({
+		return create({
 			direction: 'row',
 			children
 		});
 	}
 
 	export function createColumn(...children: Tile[]) {
-		return createSplit({
+		return create({
 			direction: 'column',
 			children
 		});
@@ -75,9 +75,9 @@
 		resizer?: Registry<R, Snippet<[Draggable, Tiles['split'], number]> | undefined>;
 	};
 
-	export function setupSplit<R extends string>(ctx: SplitContext<R>) {
+	export function setup<R extends string>(ctx: SplitContext<R>) {
 		setContext(SPLIT_CONTEXT_KEY, ctx);
-		return createSplit<R>;
+		return create<R>;
 	}
 
 	export function unmount(tile: Tiles['split'], index: number) {

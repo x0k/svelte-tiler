@@ -1,3 +1,4 @@
+import { flushSync } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { on } from 'svelte/events';
 
@@ -170,7 +171,9 @@ export class Draggable<D = unknown> {
 			this.onStop(ev);
 
 			if (ev.reason === 'drop') {
-				activeDroppable?.[ON_DROP](snap);
+				flushSync(() => {
+					activeDroppable?.[ON_DROP](snap);
+				});
 			}
 
 			this.ctx.targetId = undefined;

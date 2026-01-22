@@ -13,10 +13,11 @@
 		})
 	);
 
-	const leaf = Leaf.setupLeafs(fromConstant(test));
-	const createTabs = Tabs.setupTabs({
-		createSplit({ parent, index, type, tile, adjacent, offset }) {
+	const leaf = Leaf.setup(fromConstant(test));
+	const createTabs = Tabs.setup({
+		createSplit({ parent, type, tile, adjacent, offset }) {
 			if (parent?.type === 'split' && parent.direction === type) {
+				const index = parent.children.findIndex((c) => c.id === tile.id);
 				parent.children.splice(index + offset, 0, adjacent);
 				parent.constraints.splice(index + offset, 0, { weight: 1, minWeight: 0.2, maxWeight: 0 });
 				return parent;
@@ -28,7 +29,7 @@
 		}
 	});
 	let split = $state(
-		Split.createSplit({
+		Split.create({
 			children: [leaf('foo'), leaf('bar'), Split.createColumn(leaf('foo'), leaf('bar'))],
 			constraints: [
 				{},
