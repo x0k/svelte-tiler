@@ -40,8 +40,13 @@
 	let tile = $state(
 		Split.create({
 			direction: 'row',
-			children: [leaf('sidebar'), leaf('content')],
-			constraints: [{ minWeight: 0.1, weight: 0.2, maxWeight: 0.3 }, {}]
+			children: [
+				leaf('sidebar'),
+				createTabs({
+					tabs: [['Content', leaf('content')]]
+				})
+			],
+			constraints: [{ minWeight: 0.15, weight: 0.2, maxWeight: 0.3 }, {}]
 		})
 	);
 </script>

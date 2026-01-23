@@ -23,3 +23,7 @@ export function getRectParts(rect: DOMRect, x: number, y: number, ratio: number)
 		vpart: getEdgePart(rect.top, rect.bottom, y, ratio)
 	};
 }
+
+export function almostEqual(a: number, b: number, eps = 1e-6): boolean {
+	return Math.abs(a - b) < eps;
+}

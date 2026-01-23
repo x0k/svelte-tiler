@@ -3,6 +3,7 @@
 
 	import type { Registry } from '$lib/shared/registry.js';
 	import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
+	import { almostEqual } from '$lib/shared/geometry.js';
 	import type { Tile, TileProps, Tiles } from '$lib/model.js';
 
 	export type Direction = 'row' | 'column';
@@ -100,9 +101,7 @@
 
 	class DraggableResizer extends Draggable {
 		resizerEl: HTMLElement = splitEl;
-		len = $derived(tile.constraints.length);
 		isRow = $derived(tile.direction === 'row');
-		totalWeight = $derived(tile.constraints.reduce((a, b) => a + b.weight, 0));
 
 		index = 0;
 		currentDir = 0;
@@ -110,8 +109,12 @@
 		startPos = 0;
 		previousPos = 0;
 		containerSize = 0;
-		lastConstraints: TileConstraints[] = [];
 		remaining = 0;
+
+		lastConstraints: TileConstraints[] = [];
+		nextLayout: number[] = [];
+		totalWeight = 0;
+		len = 0;
 
 		constructor(ctx: DndContext, index: number) {
 			super(ctx);
@@ -126,7 +129,7 @@
 			this.lastDir = 0;
 			this.startPos = this.isRow ? e.pageX : e.pageY;
 			this.previousPos = this.startPos;
-			this.lastConstraints = $state.snapshot(tile.constraints);
+			this.saveConstraints();
 			this.remaining = 0;
 		}
 
@@ -148,7 +151,7 @@
 			) {
 				if (this.currentDir !== this.lastDir) {
 					this.startPos = this.previousPos;
-					this.lastConstraints = $state.snapshot(tile.constraints);
+					this.saveConstraints();
 					this.lastDir = this.currentDir;
 				}
 				const deltaWeight = Math.abs(
@@ -161,6 +164,12 @@
 					if (this.remaining > 0) {
 						this.currentDir *= -1;
 						this.adjustBy('expand');
+					}
+					const total = this.nextLayout.reduce((a, b) => a + b);
+					if (almostEqual(this.totalWeight, total)) {
+						for (let j = 0; j < this.len; j++) {
+							tile.constraints[j].weight = this.nextLayout[j];
+						}
 					}
 				}
 			}
@@ -180,10 +189,10 @@
 			if (constraints.weight < constraints.maxWeight || !isConstrained) {
 				const available = constraints.maxWeight - constraints.weight;
 				if (available < this.remaining && isConstrained) {
-					tile.constraints[j].weight = constraints.maxWeight;
+					this.nextLayout[j] = constraints.maxWeight;
 					this.remaining -= available;
 				} else {
-					tile.constraints[j].weight = constraints.weight + this.remaining;
+					this.nextLayout[j] = constraints.weight + this.remaining;
 					this.remaining = 0;
 				}
 			}
@@ -194,10 +203,10 @@
 			if (constraints.weight > constraints.minWeight) {
 				const available = constraints.weight - constraints.minWeight;
 				if (available < this.remaining) {
-					tile.constraints[j].weight = constraints.minWeight;
+					this.nextLayout[j] = constraints.minWeight;
 					this.remaining -= available;
 				} else {
-					tile.constraints[j].weight = constraints.weight - this.remaining;
+					this.nextLayout[j] = constraints.weight - this.remaining;
 					this.remaining = 0;
 				}
 			}
@@ -215,6 +224,16 @@
 					this[adjust](j++);
 				}
 			}
+		}
+
+		private saveConstraints() {
+			this.lastConstraints = $state.snapshot(tile.constraints);
+			this.totalWeight = 0;
+			this.nextLayout = this.lastConstraints.map(({ weight }) => {
+				this.totalWeight += weight;
+				return weight;
+			});
+			this.len = this.nextLayout.length;
 		}
 	}
 </script>

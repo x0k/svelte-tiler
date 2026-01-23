@@ -1,19 +1,48 @@
 @import 'tailwindcss';
 
 :root {
-	--color-bg: #1e1e1e;
-	--color-surface: #252526;
-	--color-surface-alt: #2d2d2d;
-	--color-text: #d4d4d4;
-	--color-text-muted: #a6a6a6;
-	--color-primary: #0a84ff;
-	--color-primary-hover: #1e90ff;
-	--color-accent: #c586c0;
-	--color-success: #4ec9b0;
-	--color-warning: #ff8800;
-	--color-error: #f44747;
-	--color-border: #3c3c3c;
-	--color-shadow: rgba(0, 0, 0, 0.5);
+	/* Base */
+	--color-bg: #272822;
+	--color-surface: #2d2e27;
+	--color-surface-alt: #3e3d32;
+
+	/* Text */
+	--color-text: #f8f8f2;
+	--color-text-muted: #cfcfc2;
+	--color-text-dim: #9e9e9e;
+
+	/* Primary / Accent */
+	--color-primary: #66d9ef; /* cyan */
+	--color-accent: #f92672; /* pink/red */
+
+	/* Semantic states */
+	--color-success: #a6e22e; /* green */
+	--color-warning: #e6db74; /* yellow */
+	--color-error: #f92672; /* red */
+	--color-info: #66d9ef; /* cyan */
+
+	/* Borders / dividers */
+	--color-border: #3e3d32;
+	--color-border-strong: #555652;
+
+	/* Selection / focus */
+	--color-selection-bg: rgba(102, 217, 239, 0.25);
+	--color-focus-ring: rgba(102, 217, 239, 0.5);
+
+	/* Code / pre */
+	--color-code-bg: #1e1f1c;
+	--color-code-border: #3e3d32;
+
+	/* Syntax (optional, but useful) */
+	--syntax-keyword: #f92672;
+	--syntax-string: #e6db74;
+	--syntax-number: #ae81ff;
+	--syntax-function: #a6e22e;
+	--syntax-type: #66d9ef;
+	--syntax-comment: #75715e;
+
+	/* Shadows */
+	--color-shadow: rgba(0, 0, 0, 0.6);
 }
 
 .content {
