@@ -203,8 +203,8 @@
 	{t.titles[index]}
 {/snippet}
 
-<div class="tabs">
-	<div class="tab-bar">
+<div data-tabs>
+	<div data-tabs-bar>
 		{#each tile.children as t, i (t.id)}
 			{@const droppable = new DroppableTab(ctx.dnd, t.id)}
 			{@const draggable = new DraggableTab(ctx.dnd, {
@@ -216,9 +216,9 @@
 				})
 			})}
 			<button
+				data-tabs-header
 				{@attach droppable.register}
 				{@attach draggable.register}
-				class="tab-header"
 				role="tab"
 				onclick={() => (tile.selectedTab = i)}
 				data-dragged={draggable.isDragged}
@@ -232,7 +232,7 @@
 		{/each}
 	</div>
 	<div
-		class="tab-content"
+		data-tabs-content
 		{@attach droppableContent.register}
 		data-over={droppableContent.isOver}
 		data-hpart={droppableContent.hpart}
@@ -248,12 +248,11 @@
 </div>
 
 <style>
-	.tab-header {
+	[data-tabs-header] {
 		user-select: none;
 		cursor: pointer;
 		&[data-dragged='true'] {
 			cursor: grabbing;
-			opacity: 0.6;
 		}
 	}
 </style>

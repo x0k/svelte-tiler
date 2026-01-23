@@ -238,12 +238,12 @@
 	}
 </script>
 
-<div bind:this={splitEl} class="split" style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
+<div bind:this={splitEl} data-split style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const draggable = new DraggableResizer(dndCtx, i)}
-		<div class="item" style="--grow: {tile.constraints[i].weight}">
+		<div data-split-item style="--grow: {tile.constraints[i].weight}">
 			{#if i > 0}
-				<div class="resizer" {@attach draggable.register} data-dragged={draggable.isDragged}>
+				<div data-split-resizer {@attach draggable.register} data-dragged={draggable.isDragged}>
 					{@render resizerSnippet?.(draggable, tile, i)}
 				</div>
 			{/if}
@@ -253,17 +253,17 @@
 </div>
 
 <style>
-	.split {
+	[data-split] {
 		display: flex;
 		overflow: hidden;
 		gap: var(--gap);
 
-		.item {
+		[data-split-item] {
 			position: relative;
 			flex: var(--grow) 1 0;
 		}
 
-		.resizer {
+		[data-split-resizer] {
 			position: absolute;
 		}
 

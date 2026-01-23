@@ -1,63 +1,11 @@
-@import 'tailwindcss';
-
-:root {
-	/* Base */
-	--color-bg: #272822;
-	--color-surface: #2d2e27;
-	--color-surface-alt: #3e3d32;
-
-	/* Text */
-	--color-text: #f8f8f2;
-	--color-text-muted: #cfcfc2;
-	--color-text-dim: #9e9e9e;
-
-	/* Primary / Accent */
-	--color-primary: #66d9ef; /* cyan */
-	--color-accent: #f92672; /* pink/red */
-
-	/* Semantic states */
-	--color-success: #a6e22e; /* green */
-	--color-warning: #e6db74; /* yellow */
-	--color-error: #f92672; /* red */
-	--color-info: #66d9ef; /* cyan */
-
-	/* Borders / dividers */
-	--color-border: #3e3d32;
-	--color-border-strong: #555652;
-
-	/* Selection / focus */
-	--color-selection-bg: rgba(102, 217, 239, 0.25);
-	--color-focus-ring: rgba(102, 217, 239, 0.5);
-
-	/* Code / pre */
-	--color-code-bg: #1e1f1c;
-	--color-code-border: #3e3d32;
-
-	/* Syntax (optional, but useful) */
-	--syntax-keyword: #f92672;
-	--syntax-string: #e6db74;
-	--syntax-number: #ae81ff;
-	--syntax-function: #a6e22e;
-	--syntax-type: #66d9ef;
-	--syntax-comment: #75715e;
-
-	/* Shadows */
-	--color-shadow: rgba(0, 0, 0, 0.6);
-}
-
 .content {
-	padding: 24px 32px;
+	padding: 0 32px;
 	min-height: 100%;
 
 	color: var(--color-text);
 	background: var(--color-bg);
 
-	font-family:
-		system-ui,
-		-apple-system,
-		BlinkMacSystemFont,
-		sans-serif;
-	font-size: 14px;
+	font-size: 16px;
 	line-height: 1.6;
 }
 
@@ -71,18 +19,20 @@
 .content h6 {
 	font-weight: 600;
 	line-height: 1.25;
-	margin: 24px 0 12px;
+	margin: 0;
+	padding: 24px 0 12px;
+	/* margin: 24px 0 12px; */
 }
 
 .content h1 {
 	font-size: 2em;
-	border-bottom: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--color-surface-alt);
 	padding-bottom: 8px;
 }
 
 .content h2 {
 	font-size: 1.6em;
-	border-bottom: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--color-surface-alt);
 	padding-bottom: 6px;
 }
 

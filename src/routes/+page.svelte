@@ -9,9 +9,9 @@
 	import * as Leaf from '$lib/tiles/leaf.svelte';
 	import * as Tabs from '$lib/tiles/tabs.svelte';
 
-	import Sidebar from './sidebar.svelte';
+	import Sidebar from './components/sidebar.svelte';
 
-	const leaf = Leaf.setup(
+	const createLeaf = Leaf.setup(
 		fromRecord({
 			sidebar,
 			content
@@ -41,17 +41,17 @@
 		Split.create({
 			direction: 'row',
 			children: [
-				leaf('sidebar'),
+				createLeaf('sidebar'),
 				createTabs({
-					tabs: [['Content', leaf('content')]]
+					tabs: [['README.md', createLeaf('content')]]
 				})
 			],
-			constraints: [{ minWeight: 0.15, weight: 0.2, maxWeight: 0.3 }, {}]
+			constraints: [{ minWeight: 0.2, weight: 0.2, maxWeight: 0.4 }, {}]
 		})
 	);
 </script>
 
-<div class="h-screen w-full">
+<div class="app">
 	<Tiler bind:tile tiles={{ split: Split, leaf: Leaf, tabs: Tabs }} />
 </div>
 
@@ -66,118 +66,8 @@
 {/snippet}
 
 <style>
-	:global {
-		.split {
-			--resizer-line-size: 1px;
-			--resizer-hit-size: 12px;
-			--resizer-color: #888;
-
-			width: 100%;
-			height: 100%;
-			.resizer {
-				z-index: 10;
-				inset: 0;
-
-				&::before {
-					content: '';
-					position: absolute;
-					inset: 0;
-					background: var(--resizer-color);
-					opacity: 0.5;
-				}
-
-				&:hover {
-					&::before {
-						background-color: black;
-						opacity: 1;
-					}
-				}
-			}
-
-			&[data-dir='row'] {
-				> .item {
-					> .resizer {
-						cursor: col-resize;
-						width: var(--resizer-hit-size);
-						transform: translateX(calc(-50% - var(--resizer-line-size) / 2));
-
-						&::before {
-							left: 50%;
-							width: var(--resizer-line-size);
-							transform: translateX(-50%);
-						}
-					}
-				}
-			}
-			&[data-dir='column'] {
-				> .item {
-					> .resizer {
-						cursor: row-resize;
-						height: var(--resizer-hit-size);
-						transform: translateY(calc(-50% - var(--resizer-line-size) / 2));
-
-						&::before {
-							top: 50%;
-							height: var(--resizer-line-size);
-							transform: translateY(-50%);
-						}
-					}
-				}
-			}
-		}
-		.tabs {
-			--drop-indicator-color: rgba(0, 120, 215, 0.25);
-
-			width: 100%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			.tab-bar {
-				display: flex;
-				flex-direction: row;
-				.tab-header {
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					padding: 0.4rem 0.8rem;
-				}
-			}
-			.tab-content {
-				flex-grow: 1;
-				position: relative;
-				overflow: hidden;
-				&::after {
-					content: '';
-					position: absolute;
-					pointer-events: none;
-					background: var(--drop-indicator-color);
-					transition: inset 160ms ease;
-				}
-				&[data-over='true'] {
-					&::after {
-						opacity: 1;
-					}
-					&[data-hpart='center'][data-vpart='center']::after {
-						inset: 0;
-					}
-
-					&[data-hpart='start']::after {
-						inset: 0 50% 0 0;
-					}
-
-					&[data-hpart='end']::after {
-						inset: 0 0 0 50%;
-					}
-
-					&[data-hpart='center'][data-vpart='start']::after {
-						inset: 0 0 50% 0;
-					}
-
-					&[data-hpart='center'][data-vpart='end']::after {
-						inset: 50% 0 0 0;
-					}
-				}
-			}
-		}
+	.app {
+		width: 100%;
+		height: 100vh;
 	}
 </style>
