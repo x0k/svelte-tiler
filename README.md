@@ -3,3 +3,7 @@
 Content
 
 ## test
+
+```typescript
+const code = 'block';
+```

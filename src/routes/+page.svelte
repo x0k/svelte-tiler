@@ -1,22 +1,20 @@
 <script lang="ts">
-	import { marked } from 'marked';
-
-	import readmeMd from '../../README.md?raw';
-
-	import { fromRecord } from '$lib/shared/registry.js';
+	import { fromConstant } from '$lib/shared/registry.js';
 	import { Tiler, type Tiles } from '$lib/index.js';
 	import * as Split from '$lib/tiles/split.svelte';
 	import * as Leaf from '$lib/tiles/leaf.svelte';
 	import * as Tabs from '$lib/tiles/tabs.svelte';
 
+	import { marked } from './lib/marked.js'
 	import Sidebar from './components/sidebar.svelte';
 
-	const createLeaf = Leaf.setup(
-		fromRecord({
-			sidebar,
-			content
-		})
-	);
+	import readmeMd from '../../README.md?raw';
+
+	const FILES: Record<string, string> = {
+		"README.md": readmeMd
+	}
+
+	const createLeaf = Leaf.setup(fromConstant(leaf));
 	const createTabs = Tabs.setup({
 		createSplit({ parent, type, pivot, adjacent, offset }) {
 			if (parent?.type === 'split' && parent.direction === type) {
@@ -43,7 +41,7 @@
 			children: [
 				createLeaf('sidebar'),
 				createTabs({
-					tabs: [['README.md', createLeaf('content')]]
+					tabs: [['README.md', createLeaf('README.md')]]
 				})
 			],
 			constraints: [{ minWeight: 0.2, weight: 0.2, maxWeight: 0.4 }, {}]
@@ -55,14 +53,14 @@
 	<Tiler bind:tile tiles={{ split: Split, leaf: Leaf, tabs: Tabs }} />
 </div>
 
-{#snippet sidebar()}
-	<Sidebar />
-{/snippet}
-
-{#snippet content()}
-	<div class="content">
-		{@html marked.parse(readmeMd)}
-	</div>
+{#snippet leaf(tile: Tiles['leaf'])}
+	{#if tile.name === 'sidebar'}
+		<Sidebar />
+	{:else}
+		<div class="content">
+			{@html marked.parse(FILES[tile.name])}
+		</div>
+	{/if}
 {/snippet}
 
 <style>

@@ -1,12 +1,14 @@
 <script>
 	import DocsFolder from '../icons/docs-folder.svelte';
 	import Github from '../icons/github.svelte';
+	import LibFolder from '../icons/lib-folder.svelte';
 	import Markdown from '../icons/markdown.svelte';
+	import Svelte from '../icons/svelte.svelte';
 </script>
 
 <div class="sidebar" data-theme="dark">
 	<div class="sidebar-header">
-		<span class="title">SVELTE-TILER</span>
+		<span class="title">svelte-tiler</span>
 
 		<div class="actions">
 			<a class="icon-link" href="https://github.com/x0k/svelte-tiler" target="_blank">
@@ -25,6 +27,16 @@
 			<span class="label">foo.md</span>
 		</div>
 
+		<div class="item folder open">
+			<LibFolder />
+			<span class="label">lib</span>
+		</div>
+
+		<div class="item file indent">
+			<Svelte />
+			<span class="label">foo.svelte</span>
+		</div>
+
 		<div class="item file active">
 			<Markdown />
 			<span class="label">README.md</span>
@@ -39,7 +51,7 @@
 		background: var(--color-surface);
 		color: var(--color-text);
 		font-family: system-ui, sans-serif;
-		font-size: 10.5pt;
+		font-size: 11pt;
 	}
 
 	/* Header */
@@ -53,7 +65,8 @@
 	}
 
 	.sidebar-header .title {
-		font-weight: 600;
+		text-transform: uppercase;
+		font-weight: normal;
 		letter-spacing: 0.04em;
 	}
 
@@ -68,7 +81,7 @@
 		cursor: pointer;
 	}
 
-	.icon-link svg {
+	.icon-link :global(svg) {
 		display: block; /* remove inline spacing issues */
 		width: 1em; /* adjust icon size */
 		height: 1em;
@@ -83,7 +96,7 @@
 	/* Items */
 
 	.item {
-		padding: 4px 12px;
+		padding: 4px 18px;
 		cursor: pointer;
 		white-space: nowrap;
 
@@ -135,6 +148,6 @@
 	/* Visual nesting only */
 
 	.indent {
-		padding-left: 28px;
+		padding-left: 36px;
 	}
 </style>

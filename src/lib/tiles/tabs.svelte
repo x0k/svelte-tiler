@@ -75,6 +75,42 @@
 		tile.children.splice(i, 1);
 		tile.titles.splice(i, 1);
 	}
+
+	export function insert(
+		tile: Tiles['tabs'],
+		i: number,
+		{
+			titles,
+			children
+		}: {
+			titles: string[];
+			children: Tile[];
+		}
+	) {
+		const newIds = new Set(children.map((c) => c.id));
+		let write = 0;
+		let shift = 0;
+		const c = tile.children;
+		const t = tile.titles;
+		const l = t.length;
+		for (let read = 0; read < l; read++) {
+			if (!newIds.has(c[read].id)) {
+				t[write] = t[read];
+				c[write] = c[read];
+				write++;
+			} else if (read < i) {
+				shift++;
+			}
+		}
+		c.length = write;
+		t.length = write;
+		i -= shift;
+		tile.children.splice(i, 0, ...children);
+		tile.titles.splice(i, 0, ...titles);
+		tile.selectedTab = i;
+	}
+
+	const EDGE_RATIO = 0.25;
 </script>
 
 <script lang="ts">
@@ -94,8 +130,6 @@
 	const empty = $derived(
 		(tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
 	);
-
-	const EDGE_RATIO = 0.25;
 
 	class DroppableSurface extends Droppable<Tile> {
 		hpart: EdgePart | undefined = $state.raw();
@@ -127,14 +161,13 @@
 			return super.accepts(t) && t.children.every((c) => c.id !== this.#id);
 		}
 
-		protected onDrop({ titles, children }: Tiles['tabs']): void {
+		protected onDrop(tabs: Tiles['tabs']): void {
 			const index = tile.children.findIndex((c) => c.id === this.#id);
 			if (index < 0) {
 				return;
 			}
 			const i = index + (this.hpart === 'start' ? 0 : 1);
-			tile.children.splice(i, 0, ...children);
-			tile.titles.splice(i, 0, ...titles);
+			insert(tile, i, tabs);
 		}
 	}
 
@@ -146,15 +179,7 @@
 			const id = tabs.children[0].id;
 			if (this.hpart === 'center' && this.vpart === 'center') {
 				const i = tile.children.findIndex((t) => t.id === id);
-				if (i < 0) {
-					const l = tile.children.push(...tabs.children);
-					tile.titles.push(...tabs.titles);
-					tile.selectedTab = l - 1;
-				} else {
-					tile.children.splice(i, 0, ...tabs.children);
-					tile.titles.splice(i, 0, ...tabs.titles);
-					tile.selectedTab = i;
-				}
+				insert(tile, i < 0 ? tile.children.length : i, tabs);
 			} else {
 				parent = tabsCtx.createSplit({
 					parent,
