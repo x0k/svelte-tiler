@@ -2,14 +2,14 @@
 	import Render from './render.svelte';
 	import type { Tile } from './model.ts';
 
-	let { tile = $bindable() }: { tile: Tile | undefined } = $props();
+	let { layout = $bindable() }: { layout: Tile | undefined } = $props();
 </script>
 
-{#if tile}
+{#if layout}
 	<Render
-		bind:tile
-		unmount={() => (tile = undefined)}
-		bind:parent={() => undefined, (t) => (tile = t)}
+		bind:tile={layout}
+		unmount={() => (layout = undefined)}
+		bind:parent={() => undefined, (t) => (layout = t)}
 		index={0}
 	/>
 {/if}

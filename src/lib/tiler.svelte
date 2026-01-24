@@ -3,9 +3,9 @@
 	import type { Tile } from './model.js';
 	import Panel from './panel.svelte';
 
-	let { tile = $bindable(), ...rest }: { tile: Tile | undefined } & TilerContextOptions = $props();
+	let { layout = $bindable(), ...rest }: { layout: Tile | undefined } & TilerContextOptions = $props();
 
 	setTilerContext(createTilerContext(rest));
 </script>
 
-<Panel bind:tile />
+<Panel bind:layout />

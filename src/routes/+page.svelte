@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fromConstant, fromRecord } from '$lib/shared/registry.js';
+	import type { Constraint } from '$lib/shared/constraints.js';
 	import { Tiler, type Tiles } from '$lib/index.js';
 	import * as Split from '$lib/tiles/split.svelte';
 	import * as Leaf from '$lib/tiles/leaf.svelte';
@@ -18,6 +19,7 @@
 		'README.md': readmeMd
 	};
 
+	const defaultConstraints: Constraint[] = [{ type: 'minSize', unit: 'weight', value: 0.2 }];
 	const createLeaf = Leaf.setup(fromConstant(leaf));
 	const createTabs = Tabs.setup({
 		headers: fromRecord({
@@ -25,18 +27,19 @@
 		}),
 		createSplit({ parent, type, pivot, adjacent, offset }) {
 			if (parent?.type === 'split' && parent.direction === type) {
-				const index = parent.children.findIndex((c) => c.id === pivot.id);
-				parent.children.splice(index + offset, 0, adjacent);
-				parent.constraints.splice(index + offset, 0, { weight: 1, minWeight: 0.2, maxWeight: 0 });
+				const index = parent.children.findIndex((c) => c.id === pivot.id) + offset;
+				parent.children.splice(index, 0, adjacent);
+				parent.constraints.splice(index, 0, defaultConstraints);
+				parent.weights.splice(index, 0, 1);
 				return parent;
 			}
-			const tiles = new Array<Tiles['tabs']>(2);
-			tiles[1 - offset] = pivot;
-			tiles[offset] = adjacent;
+			const tiles = new Array<Split.SplitTileOptions>(2);
+			tiles[1 - offset] = { tile: pivot, constraints: defaultConstraints };
+			tiles[offset] = { tile: adjacent, constraints: defaultConstraints };
 			const next = Split.create({
 				direction: type,
 				children: tiles,
-				gapPx: 1,
+				gapPx: 1
 			});
 			if (parent && parent.children.length > 1) {
 				const index = parent.children.findIndex((c) => c.id === pivot.id);
@@ -46,33 +49,47 @@
 			return next;
 		}
 	});
-	let tile = $state(
+	let layout = $state(
 		Split.create({
 			direction: 'row',
 			gapPx: 0,
 			children: [
-				createLeaf('sidebar'),
-				Split.create({
-					gapPx: 1,
-					children: [
-						createTabs({
-							tabHeader: 'tabHeader',
-							tabs: [['README.md', createLeaf('README.md')]]
-						}),
-						createTabs({
-							tabHeader: 'tabHeader',
-							tabs: [['model.ts', createLeaf('lib/model.ts')]]
-						})
+				{
+					tile: createLeaf('sidebar'),
+					weight: 0.2,
+					constraints: [
+						{ type: 'minSize', unit: 'px', value: 150 },
+						{ type: 'maxSize', unit: 'weight', value: 0.4 }
 					]
-				})
-			],
-			constraints: [{ minWeight: 0.1, weight: 0.2, maxWeight: 0.4 }, {}]
+				},
+				{
+					tile: Split.create({
+						gapPx: 1,
+						children: [
+							{
+								tile: createTabs({
+									tabHeader: 'tabHeader',
+									tabs: [['README.md', createLeaf('README.md')]]
+								}),
+								constraints: defaultConstraints
+							},
+							{
+								tile: createTabs({
+									tabHeader: 'tabHeader',
+									tabs: [['model.ts', createLeaf('lib/model.ts')]]
+								}),
+								constraints: defaultConstraints
+							}
+						]
+					})
+				}
+			]
 		})
 	);
 </script>
 
 <div class="app">
-	<Tiler bind:tile tiles={{ split: Split, leaf: Leaf, tabs: Tabs }} />
+	<Tiler bind:layout tiles={{ split: Split, leaf: Leaf, tabs: Tabs }} />
 </div>
 
 {#snippet tabHeader(tile: Tiles['tabs'], i: number)}
