@@ -1,0 +1,50 @@
+<script lang="ts">
+	import ChevronRight from '~icons/codicon/chevron-right';
+	import ChevronDown from '~icons/codicon/chevron-down';
+	import FolderClosed from '~icons/vscode-icons/default-folder';
+	import FolderOpened from '~icons/vscode-icons/default-folder-opened';
+	import FileIcon from '~icons/vscode-icons/file-type-text';
+
+	import type { TreeNode } from '../lib/file-tree.js';
+	import ExplorerNode from './explorer-node.svelte';
+
+	const { node, level = 0 }: { node: TreeNode; level: number } = $props();
+
+	let open = $state(true);
+</script>
+
+{#if node.type === 'folder'}
+	<div
+		class="item folder indent"
+		style="padding-left: {12 + level * 16}px"
+		onclick={() => (open = !open)}
+	>
+		<span class="chevron">
+			{#if open}
+				<ChevronDown />
+			{:else}
+				<ChevronRight />
+			{/if}
+		</span>
+
+		{#if open}
+			<FolderOpened />
+		{:else}
+			<FolderClosed />
+		{/if}
+
+		<span class="label">{node.name}</span>
+	</div>
+
+	{#if open}
+		{#each node.children as child}
+			<ExplorerNode node={child} level={level + 1} />
+		{/each}
+	{/if}
+{:else}
+	<div class="item file indent" style="padding-left: {12 + level * 16}px">
+		<span class="chevron-placeholder"></span>
+		<FileIcon />
+		<span class="label">{node.name}</span>
+	</div>
+{/if}

@@ -1,5 +1,6 @@
-@import './tiles.css';
+@import './sidebar.css';
 @import './content.css';
+@import './tiles.css';
 
 :root {
 	/* =======================================================

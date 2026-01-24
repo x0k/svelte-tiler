@@ -5,12 +5,14 @@
 	import * as Leaf from '$lib/tiles/leaf.svelte';
 	import * as Tabs from '$lib/tiles/tabs.svelte';
 
-	import { marked } from './lib/marked.js'
+	import { markdownToHTML } from './lib/html.ts'
 	import Sidebar from './components/sidebar.svelte';
 
 	import readmeMd from '../../README.md?raw';
+	import modelTs from '../lib/model.ts?raw';
 
 	const FILES: Record<string, string> = {
+		"lib/model.ts": modelTs,
 		"README.md": readmeMd
 	}
 
@@ -44,7 +46,7 @@
 					tabs: [['README.md', createLeaf('README.md')]]
 				})
 			],
-			constraints: [{ minWeight: 0.2, weight: 0.2, maxWeight: 0.4 }, {}]
+			constraints: [{ minWeight: 0.1, weight: 0.2, maxWeight: 0.4 }, {}]
 		})
 	);
 </script>
@@ -55,10 +57,10 @@
 
 {#snippet leaf(tile: Tiles['leaf'])}
 	{#if tile.name === 'sidebar'}
-		<Sidebar />
+		<Sidebar files={FILES} />
 	{:else}
 		<div class="content">
-			{@html marked.parse(FILES[tile.name])}
+			{@html markdownToHTML(FILES[tile.name])}
 		</div>
 	{/if}
 {/snippet}

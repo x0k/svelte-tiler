@@ -38,6 +38,8 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.39.1",
+		"@iconify-json/codicon": "^1.2.40",
+		"@iconify-json/vscode-icons": "^1.2.40",
 		"@shikijs/langs": "^3.21.0",
 		"@shikijs/themes": "^3.21.0",
 		"@sveltejs/adapter-static": "^3.0.10",
@@ -60,6 +62,7 @@
 		"svelte-check": "^4.3.4",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.48.1",
+		"unplugin-icons": "^23.0.1",
 		"vite": "^7.2.6",
 		"vite-plugin-devtools-json": "^1.0.0",
 		"vitest": "^4.0.15",
