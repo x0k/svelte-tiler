@@ -1,6 +1,7 @@
 {
 	"name": "svelte-tiler",
 	"version": "0.0.1",
+	"license": "MIT",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -39,7 +40,7 @@
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.39.1",
 		"@iconify-json/codicon": "^1.2.40",
-		"@iconify-json/vscode-icons": "^1.2.40",
+		"@iconify-json/material-icon-theme": "^1.2.49",
 		"@shikijs/langs": "^3.21.0",
 		"@shikijs/themes": "^3.21.0",
 		"@sveltejs/adapter-static": "^3.0.10",

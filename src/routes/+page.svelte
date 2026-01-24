@@ -6,12 +6,12 @@
 	import * as Tabs from '$lib/tiles/tabs.svelte';
 
 	import { highlight, markdownToHTML } from './lib/html.ts';
+	import { getFileExtension } from './lib/file-tree.ts';
 	import Sidebar from './components/sidebar.svelte';
+	import FileIcon from './components/file-icon.svelte';
 
 	import readmeMd from '../../README.md?raw';
 	import modelTs from '../lib/model.ts?raw';
-	import { getFileExtension } from './lib/file-tree.ts';
-	import FileIcon from './components/file-icon.svelte';
 
 	const FILES: Record<string, string> = {
 		'lib/model.ts': modelTs,
@@ -33,7 +33,11 @@
 			const tiles = new Array<Tiles['tabs']>(2);
 			tiles[1 - offset] = pivot;
 			tiles[offset] = adjacent;
-			const next = (type === 'row' ? Split.createRow : Split.createColumn).apply(Split, tiles);
+			const next = Split.create({
+				direction: type,
+				children: tiles,
+				gapPx: 1,
+			});
 			if (parent && parent.children.length > 1) {
 				const index = parent.children.findIndex((c) => c.id === pivot.id);
 				parent.children[index] = next;
@@ -45,13 +49,20 @@
 	let tile = $state(
 		Split.create({
 			direction: 'row',
+			gapPx: 0,
 			children: [
 				createLeaf('sidebar'),
-				createTabs({
-					tabHeader: 'tabHeader',
-					tabs: [
-						['README.md', createLeaf('README.md')],
-						['model.ts', createLeaf('lib/model.ts')]
+				Split.create({
+					gapPx: 1,
+					children: [
+						createTabs({
+							tabHeader: 'tabHeader',
+							tabs: [['README.md', createLeaf('README.md')]]
+						}),
+						createTabs({
+							tabHeader: 'tabHeader',
+							tabs: [['model.ts', createLeaf('lib/model.ts')]]
+						})
 					]
 				})
 			],

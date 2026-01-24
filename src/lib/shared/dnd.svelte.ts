@@ -283,7 +283,7 @@ export class ClonedGhost {
 		this.onMove(e);
 	}
 
-	attach(root = document.body) {
+	attach(root: ShadowRoot | Document | Node) {
 		root.appendChild(this.#element);
 		return this;
 	}

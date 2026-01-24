@@ -31,7 +31,7 @@
 		resizer?: R;
 		/** @default "row" */
 		direction?: Direction;
-		/** @default 1 */
+		/** @default 0 */
 		gapPx?: number;
 	}
 
@@ -52,7 +52,7 @@
 			constraints,
 			direction: options.direction ?? 'row',
 			resizer: options.resizer,
-			gapPx: options.gapPx ?? 1
+			gapPx: options.gapPx ?? 0
 		};
 	}
 
@@ -123,7 +123,6 @@
 
 		protected onStart(e: PointerEvent, el: HTMLElement): void {
 			this.resizerEl = el;
-			this.containerSize = this.isRow ? splitEl.clientWidth : splitEl.clientHeight;
 
 			this.currentDir = 0;
 			this.lastDir = 0;
@@ -131,6 +130,9 @@
 			this.previousPos = this.startPos;
 			this.saveConstraints();
 			this.remaining = 0;
+
+			this.containerSize =
+				(this.isRow ? splitEl.clientWidth : splitEl.clientHeight) - (this.len - 1) * tile.gapPx;
 		}
 
 		protected onMove(e: PointerEvent) {
@@ -179,7 +181,7 @@
 		protected onStop() {
 			for (let j = 0; j < this.len; j++) {
 				const c = tile.constraints[j];
-				c.weight = Number.parseFloat(c.weight.toFixed(2));
+				c.weight = Number.parseFloat(c.weight.toFixed(3));
 			}
 		}
 
@@ -238,7 +240,7 @@
 	}
 </script>
 
-<div bind:this={splitEl} data-split style="--gap: ${tile.gapPx}px;" data-dir={tile.direction}>
+<div bind:this={splitEl} data-split style="--gap: {tile.gapPx}px;" data-dir={tile.direction}>
 	{#each tile.children as t, i (t.id)}
 		{@const draggable = new DraggableResizer(dndCtx, i)}
 		<div data-split-item style="--grow: {tile.constraints[i].weight}">
@@ -261,6 +263,8 @@
 		[data-split-item] {
 			position: relative;
 			flex: var(--grow) 1 0;
+			min-width: 0;
+			min-height: 0;
 		}
 
 		[data-split-resizer] {

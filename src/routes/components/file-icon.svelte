@@ -1,20 +1,22 @@
-<script lang="ts">
-	import VscodeIconsFileTypeTypescript from '~icons/vscode-icons/file-type-typescript';
-	import VscodeIconsFileTypeSvelte from '~icons/vscode-icons/file-type-svelte';
-	import VscodeIconsFileTypeMarkdown from '~icons/vscode-icons/file-type-markdown';
-	import FileIcon from '~icons/vscode-icons/file-type-text';
+<script lang="ts" module>
+	import MaterialIconThemeTypescript from '~icons/material-icon-theme/typescript';
+	import MaterialIconThemeSvelte from '~icons/material-icon-theme/svelte';
+	import MaterialIconThemeMarkdown from '~icons/material-icon-theme/markdown';
+	import CodiconFile from '~icons/codicon/file';
 
 	const icons = {
-		ts: VscodeIconsFileTypeTypescript,
-		svelte: VscodeIconsFileTypeSvelte,
-		md: VscodeIconsFileTypeMarkdown
+		ts: MaterialIconThemeTypescript,
+		svelte: MaterialIconThemeSvelte,
+		md: MaterialIconThemeMarkdown
 	};
 
 	type IconType = keyof typeof icons;
+</script>
 
-	const { extension }: { extension: IconType | (string & {}) } = $props();
+<script lang="ts">
+	const { extension }: { extension: string } = $props();
 
-	const Icon = $derived(icons[extension as IconType] ?? FileIcon);
+	const Icon = $derived(icons[extension as IconType] ?? CodiconFile);
 </script>
 
 <Icon />

@@ -7,3 +7,7 @@ Content
 ```typescript
 const code = 'block';
 ```
+
+## License
+
+MIT

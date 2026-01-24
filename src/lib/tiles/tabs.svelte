@@ -206,7 +206,7 @@
 		}
 
 		protected feedback(e: PointerEvent, el: HTMLElement) {
-			return new ClonedGhost(el, e).attach();
+			return new ClonedGhost(el, e).attach(ctx.portalTarget);
 		}
 
 		protected onStop({ reason }: StopEvent): void {

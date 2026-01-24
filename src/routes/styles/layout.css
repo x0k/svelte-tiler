@@ -133,6 +133,16 @@
 	--font-mono:
 		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'JetBrains Mono',
 		'Fira Code', monospace;
+
+	--scrollbar-size: 16px;
+
+	/* track */
+	--scrollbar-track-border: rgba(248, 248, 242, 0.06);
+
+	/* thumb */
+	--scrollbar-thumb: oklab(54.67100000000001% -0.00371 0.02853 / 0.45);
+	--scrollbar-thumb-hover: rgba(117, 113, 94, 0.7);
+	--scrollbar-thumb-active: rgba(117, 113, 94, 0.9);
 }
 
 body {

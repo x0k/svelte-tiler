@@ -1,12 +1,13 @@
 <script lang="ts">
 	import ChevronRight from '~icons/codicon/chevron-right';
 	import ChevronDown from '~icons/codicon/chevron-down';
-	import FolderClosed from '~icons/vscode-icons/default-folder';
-	import FolderOpened from '~icons/vscode-icons/default-folder-opened';
+	import FolderClosed from '~icons/codicon/folder';
+	import FolderOpened from '~icons/codicon/folder-opened';
 
 	import { getFileExtension, type TreeNode } from '../lib/file-tree.js';
 	import ExplorerNode from './explorer-node.svelte';
 	import FileIcon from './file-icon.svelte';
+	import FolderIcon from './folder-icon.svelte';
 
 	const { node, level = 0 }: { node: TreeNode; level?: number } = $props();
 
@@ -29,11 +30,7 @@
 			{/if}
 		</span>
 
-		{#if open}
-			<FolderOpened />
-		{:else}
-			<FolderClosed />
-		{/if}
+		<FolderIcon name={node.name} {open} />
 
 		<span class="label">{node.name}</span>
 	</div>
