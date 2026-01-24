@@ -7,33 +7,33 @@ import { createHighlighterCoreSync } from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 
 const languages = {
-	ts,
-	svelte
+  ts,
+  svelte,
 };
 
 export type Language = keyof typeof languages;
 
 const shiki = createHighlighterCoreSync({
-	themes: [monokai],
-	langs: Object.values(languages),
-	engine: createJavaScriptRegexEngine()
+  themes: [monokai],
+  langs: Object.values(languages),
+  engine: createJavaScriptRegexEngine(),
 });
 
 marked.use({
-	renderer: {
-		code({ text, lang }) {
-			return shiki.codeToHtml(text, {
-				lang: lang ?? 'text',
-				theme: 'monokai'
-			});
-		}
-	}
+  renderer: {
+    code({ text, lang }) {
+      return shiki.codeToHtml(text, {
+        lang: lang ?? 'text',
+        theme: 'monokai',
+      });
+    },
+  },
 });
 
 export function markdownToHTML(text: string) {
-	return marked.parse(text);
+  return marked.parse(text);
 }
 
 export function highlight(code: string, lang: Language) {
-	return shiki.codeToHtml(code, { lang, theme: 'monokai' });
+  return shiki.codeToHtml(code, { lang, theme: 'monokai' });
 }

@@ -1,124 +1,144 @@
 [data-split] {
-	--resizer-line-size: var(--gap);
-	--resizer-hit-size: 6px;
+  --resizer-line-size: var(--gap);
+  --resizer-hit-size: 6px;
 
-	width: 100%;
-	height: 100%;
+  width: 100%;
+  height: 100%;
 
-	&[data-dir='row'] {
-		> [data-split-item] > [data-split-resizer] {
-			cursor: col-resize;
-			width: var(--resizer-line-size);
-			transform: translateX(calc(-50% - var(--resizer-line-size) / 2));
+  &[data-dir='row'] {
+    > [data-split-item] > [data-split-resizer] {
+      cursor: col-resize;
+      width: var(--resizer-line-size);
+      transform: translateX(calc(-50% - var(--resizer-line-size) / 2));
 
-			&::before {
-				left: 50%;
-				width: var(--resizer-hit-size);
-				transform: translateX(-50%);
-			}
-		}
-	}
-	&[data-dir='column'] {
-		> [data-split-item] > [data-split-resizer] {
-			cursor: row-resize;
-			height: var(--resizer-line-size);
-			transform: translateY(calc(-50% - var(--resizer-line-size) / 2));
+      &::before {
+        left: 50%;
+        width: var(--resizer-hit-size);
+        transform: translateX(-50%);
+      }
+    }
+  }
+  &[data-dir='column'] {
+    > [data-split-item] > [data-split-resizer] {
+      cursor: row-resize;
+      height: var(--resizer-line-size);
+      transform: translateY(calc(-50% - var(--resizer-line-size) / 2));
 
-			&::before {
-				top: 50%;
-				height: var(--resizer-hit-size);
-				transform: translateY(-50%);
-			}
-		}
-	}
+      &::before {
+        top: 50%;
+        height: var(--resizer-hit-size);
+        transform: translateY(-50%);
+      }
+    }
+  }
 }
 
 [data-split-resizer] {
-	z-index: 100;
-	inset: 0;
-	background: var(--color-border-soft);
-	&::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		transition: opacity 0.1s linear;
-		background: var(--color-border-strong);
-	}
+  z-index: 100;
+  inset: 0;
+  background: var(--color-border-soft);
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.1s linear;
+    background: var(--color-border-strong);
+  }
 
-	&:hover {
-		&::before {
-			opacity: 1;
-			transition-delay: 0.4s;
-		}
-	}
+  &:hover {
+    &::before {
+      opacity: 1;
+      transition-delay: 0.4s;
+    }
+  }
 }
 
 [data-tabs] {
-	--drop-indicator-color: rgba(0, 120, 215, 0.25);
+  --drop-indicator-color: rgba(0, 120, 215, 0.25);
 
-	width: 100%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 [data-tabs-bar] {
-	display: flex;
-	flex-direction: row;
-	background: var(--color-code-bg);
+  display: flex;
+  flex-direction: row;
+  background: var(--color-code-bg);
+  overflow: hidden;
+}
+
+[data-tabs-list] {
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+[data-tabs-spacer] {
+  flex-grow: 1;
+}
+
+[data-tabs-actions] {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  color: var(--color-text-muted);
+  padding: 0 0.5rem;
 }
 
 [data-tabs-header] {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0.5rem 1.5rem 0.5rem 1rem;
-	background: var(--color-surface-alt);
-	color: var(--color-text-muted);
-	font-size: 12pt;
-	gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.5rem 0.5rem 1rem;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 12pt;
+  gap: 0.5rem;
 
-	&[data-selected='true'] {
-		background: var(--color-bg);
-	}
+  &[data-selected='true'] {
+    background: var(--color-bg);
+  }
 }
 
 [data-tabs-content] {
-	flex-grow: 1;
-	position: relative;
-	overflow: hidden;
-	&::after {
-		content: '';
-		position: absolute;
-		pointer-events: none;
-		background: var(--drop-indicator-color);
-		transition: inset 160ms ease;
-	}
-	&[data-over='true'] {
-		&::after {
-			opacity: 1;
-		}
-		&[data-hpart='center'][data-vpart='center']::after {
-			inset: 0;
-		}
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    background: var(--drop-indicator-color);
+    transition: inset 160ms ease;
+  }
+  &[data-over='true'] {
+    &::after {
+      opacity: 1;
+    }
+    &[data-hpart='center'][data-vpart='center']::after {
+      inset: 0;
+    }
 
-		&[data-hpart='start']::after {
-			inset: 0 50% 0 0;
-		}
+    &[data-hpart='start']::after {
+      inset: 0 50% 0 0;
+    }
 
-		&[data-hpart='end']::after {
-			inset: 0 0 0 50%;
-		}
+    &[data-hpart='end']::after {
+      inset: 0 0 0 50%;
+    }
 
-		&[data-hpart='center'][data-vpart='start']::after {
-			inset: 0 0 50% 0;
-		}
+    &[data-hpart='center'][data-vpart='start']::after {
+      inset: 0 0 50% 0;
+    }
 
-		&[data-hpart='center'][data-vpart='end']::after {
-			inset: 50% 0 0 0;
-		}
-	}
+    &[data-hpart='center'][data-vpart='end']::after {
+      inset: 50% 0 0 0;
+    }
+  }
 }
 
 /* Firefox fallback */
@@ -130,38 +150,38 @@
 /* Chromium / WebKit */
 
 ::-webkit-scrollbar-corner {
-	background: transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar {
-	width: var(--scrollbar-size);
-	height: var(--scrollbar-size);
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 
 ::-webkit-scrollbar-track {
-	background: transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-track:vertical {
-	box-sizing: border-box;
-	border-left: 1px solid var(--color-border-soft);
+  box-sizing: border-box;
+  border-left: 1px solid var(--color-border-soft);
 }
 
 ::-webkit-scrollbar-thumb {
-	background-color: var(--scrollbar-thumb);
-	border-radius: 0; /* прямоугольный thumb */
-	border: 1px solid transparent; /* визуальный отступ */
-	background-clip: padding-box;
+  background-color: var(--scrollbar-thumb);
+  border-radius: 0; /* прямоугольный thumb */
+  border: 1px solid transparent; /* визуальный отступ */
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background-color: var(--scrollbar-thumb-hover);
+  background-color: var(--scrollbar-thumb-hover);
 }
 
 ::-webkit-scrollbar-thumb:active {
-	background-color: var(--scrollbar-thumb-active);
+  background-color: var(--scrollbar-thumb-active);
 }
 
 ::-webkit-scrollbar-button {
-	display: none;
+  display: none;
 }

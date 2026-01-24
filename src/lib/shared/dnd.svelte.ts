@@ -9,292 +9,325 @@ const ON_MOVE = Symbol('on-move-key');
 const ON_LEAVE = Symbol('on-leave-key');
 const ON_DROP = Symbol('on-drop-key');
 
+export interface DndContextOptions {
+  portalTarget?: ShadowRoot | Element;
+}
+
 export class DndContext<D = unknown> {
-	#droppables = new SvelteMap<string, Droppable<D, any>>();
+  #portalTarget: ShadowRoot | Element | undefined;
 
-	sourceId: string | undefined = $state.raw();
-	targetId: string | undefined = $state.raw();
+  get portalTarget(): ShadowRoot | Element {
+    return this.#portalTarget ?? document.body;
+  }
 
-	get droppables(): MutableRegistry<string, Droppable<D, any> | undefined> {
-		return this.#droppables;
-	}
+  constructor({ portalTarget }: DndContextOptions = {}) {
+    this.#portalTarget = portalTarget;
+  }
 
-	findDroppable(x: number, y: number, data: D | undefined): Droppable<D, any> | undefined {
-		for (const d of this.#droppables.values()) {
-			if (d.element === undefined) {
-				continue;
-			}
-			const r = d.element.getBoundingClientRect();
-			if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
-				continue;
-			}
-			if (d.accepts(data)) {
-				return d;
-			}
-		}
-	}
+  #droppables = new SvelteMap<string, Droppable<D, any>>();
+
+  sourceId: string | undefined = $state.raw();
+  targetId: string | undefined = $state.raw();
+
+  get droppables(): MutableRegistry<string, Droppable<D, any> | undefined> {
+    return this.#droppables;
+  }
+
+  findDroppable(
+    x: number,
+    y: number,
+    data: D | undefined
+  ): Droppable<D, any> | undefined {
+    for (const d of this.#droppables.values()) {
+      if (d.element === undefined) {
+        continue;
+      }
+      const r = d.element.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
+        continue;
+      }
+      if (d.accepts(data)) {
+        return d;
+      }
+    }
+  }
 }
 
 export type StopReason = 'drop' | 'cancel';
 
 export interface StopEvent {
-	reason: StopReason;
+  reason: StopReason;
 }
 
 export interface DraggableOptions<D> {
-	data?: D;
+  data?: D;
 }
 
 export class Draggable<D = unknown> {
-	#disposePointerDownHandler: (() => void) | undefined;
-	#disposeClickHandler: (() => void) | undefined;
-	#didDrag = false;
+  #disposePointerDownHandler: (() => void) | undefined;
+  #disposeClickHandler: (() => void) | undefined;
+  #didDrag = false;
 
-	readonly id = crypto.randomUUID();
+  readonly id = crypto.randomUUID();
 
-	constructor(
-		protected readonly ctx: DndContext<D>,
-		protected readonly options?: DraggableOptions<D>
-	) {
-		this.register = this.register.bind(this);
-	}
+  constructor(
+    protected readonly ctx: DndContext<D>,
+    protected readonly options?: DraggableOptions<D>
+  ) {
+    this.register = this.register.bind(this);
+  }
 
-	get isDragged() {
-		return this.ctx.sourceId === this.id;
-	}
+  get isDragged() {
+    return this.ctx.sourceId === this.id;
+  }
 
-	register(el: HTMLElement) {
-		this.#disposePointerDownHandler = on(el, 'pointerdown', (e) => this.pointerDownHandler(e));
-		this.#disposeClickHandler = on(
-			el,
-			'click',
-			(e) => {
-				if (!this.#didDrag) {
-					return;
-				}
-				e.stopImmediatePropagation();
-				e.preventDefault();
-				this.#didDrag = false;
-			},
-			{ capture: true }
-		);
-		return () => {
-			this[Symbol.dispose]();
-		};
-	}
+  register(el: HTMLElement) {
+    this.#disposePointerDownHandler = on(el, 'pointerdown', (e) =>
+      this.pointerDownHandler(e)
+    );
+    this.#disposeClickHandler = on(
+      el,
+      'click',
+      (e) => {
+        if (!this.#didDrag) {
+          return;
+        }
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        this.#didDrag = false;
+      },
+      { capture: true }
+    );
+    return () => {
+      this[Symbol.dispose]();
+    };
+  }
 
-	[Symbol.dispose]() {
-		this.#disposeClickHandler?.();
-		this.#disposePointerDownHandler?.();
-	}
+  [Symbol.dispose]() {
+    this.#disposeClickHandler?.();
+    this.#disposePointerDownHandler?.();
+  }
 
-	protected feedback(
-		_e: PointerEvent,
-		_el: HTMLElement
-	): { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void } | undefined {
-		return undefined;
-	}
+  protected feedback(
+    _e: PointerEvent,
+    _el: HTMLElement
+  ):
+    | { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void }
+    | undefined {
+    return undefined;
+  }
 
-	protected onStart(_e: PointerEvent, _el: HTMLElement) {}
+  protected onStart(_e: PointerEvent, _el: HTMLElement) {}
 
-	protected onMove(_e: PointerEvent) {}
+  protected onMove(_e: PointerEvent) {}
 
-	protected onStop(_e: StopEvent) {}
+  protected onStop(_e: StopEvent) {}
 
-	protected pointerDownHandler(
-		event: PointerEvent & {
-			currentTarget: HTMLElement;
-		}
-	) {
-		if (event.button !== 0 || !event.isPrimary) {
-			return;
-		}
+  protected pointerDownHandler(
+    event: PointerEvent & {
+      currentTarget: HTMLElement;
+    }
+  ) {
+    if (event.button !== 0 || !event.isPrimary) {
+      return;
+    }
 
-		const el = event.currentTarget;
+    const el = event.currentTarget;
 
-		el.setPointerCapture(event.pointerId);
+    el.setPointerCapture(event.pointerId);
 
-		const abortController = new AbortController();
+    const abortController = new AbortController();
 
-		let feedback:
-			| {
-					onMove: (e: PointerEvent) => void;
-					onStop: (e: StopEvent) => void;
-			  }
-			| undefined;
+    let feedback:
+      | {
+          onMove: (e: PointerEvent) => void;
+          onStop: (e: StopEvent) => void;
+        }
+      | undefined;
 
-		let activeDroppable: Droppable<D, any> | undefined;
-		const handleMove = (e: PointerEvent) => {
-			if (e.pointerId !== event.pointerId) {
-				return;
-			}
+    let activeDroppable: Droppable<D, any> | undefined;
+    const handleMove = (e: PointerEvent) => {
+      if (e.pointerId !== event.pointerId) {
+        return;
+      }
 
-			if (!this.#didDrag) {
-				const dx = e.clientX - event.clientX;
-				const dy = e.clientY - event.clientY;
-				if (dx * dx + dy * dy < 16) {
-					return;
-				}
-				this.#didDrag = true;
-				this.ctx.sourceId = this.id;
-				feedback = this.feedback(e, el);
-				this.onStart(e, el);
-			}
+      if (!this.#didDrag) {
+        const dx = e.clientX - event.clientX;
+        const dy = e.clientY - event.clientY;
+        if (dx * dx + dy * dy < 16) {
+          return;
+        }
+        this.#didDrag = true;
+        this.ctx.sourceId = this.id;
+        feedback = this.feedback(e, el);
+        this.onStart(e, el);
+      }
 
-			this.onMove(e);
+      this.onMove(e);
 
-			feedback?.onMove(e);
+      feedback?.onMove(e);
 
-			const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, this.options?.data);
-			if (activeDroppable !== nextDroppable) {
-				activeDroppable?.[ON_LEAVE]();
-				nextDroppable?.[ON_ENTER]();
-				activeDroppable = nextDroppable;
-				this.ctx.targetId = activeDroppable?.id;
-			}
-			activeDroppable?.[ON_MOVE](e);
-		};
+      const nextDroppable = this.ctx.findDroppable(
+        e.clientX,
+        e.clientY,
+        this.options?.data
+      );
+      if (activeDroppable !== nextDroppable) {
+        activeDroppable?.[ON_LEAVE]();
+        nextDroppable?.[ON_ENTER]();
+        activeDroppable = nextDroppable;
+        this.ctx.targetId = activeDroppable?.id;
+      }
+      activeDroppable?.[ON_MOVE](e);
+    };
 
-		const handleStop = (ev: StopEvent) => {
-			el.releasePointerCapture(event.pointerId);
-			abortController.abort();
+    const handleStop = (ev: StopEvent) => {
+      el.releasePointerCapture(event.pointerId);
+      abortController.abort();
 
-			if (!this.#didDrag) {
-				return;
-			}
+      if (!this.#didDrag) {
+        return;
+      }
 
-			const snap = ev.reason === 'drop' ? $state.snapshot(this.options?.data) : undefined;
-			activeDroppable?.[ON_LEAVE]();
+      const snap =
+        ev.reason === 'drop' ? $state.snapshot(this.options?.data) : undefined;
+      activeDroppable?.[ON_LEAVE]();
 
-			feedback?.onStop(ev);
+      feedback?.onStop(ev);
 
-			this.onStop(ev);
+      this.onStop(ev);
 
-			if (ev.reason === 'drop') {
-				flushSync(() => {
-					activeDroppable?.[ON_DROP](snap);
-				});
-			}
+      if (ev.reason === 'drop') {
+        flushSync(() => {
+          activeDroppable?.[ON_DROP](snap);
+        });
+      }
 
-			this.ctx.targetId = undefined;
-			this.ctx.sourceId = undefined;
-		};
+      this.ctx.targetId = undefined;
+      this.ctx.sourceId = undefined;
+    };
 
-		function onKeydown(e: KeyboardEvent) {
-			if (e.key === 'Escape') {
-				handleStop({ reason: 'cancel' });
-			}
-		}
+    function onKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        handleStop({ reason: 'cancel' });
+      }
+    }
 
-		window.addEventListener('pointermove', handleMove, abortController);
-		window.addEventListener(
-			'pointerup',
-			(e) => {
-				if (e.pointerId !== event.pointerId) {
-					return;
-				}
-				handleStop({ reason: activeDroppable === undefined ? 'cancel' : 'drop' });
-			},
-			abortController
-		);
-		window.addEventListener('keydown', onKeydown, abortController);
-		window.addEventListener('contextmenu', () => handleStop({ reason: 'cancel' }), abortController);
-	}
+    window.addEventListener('pointermove', handleMove, abortController);
+    window.addEventListener(
+      'pointerup',
+      (e) => {
+        if (e.pointerId !== event.pointerId) {
+          return;
+        }
+        handleStop({
+          reason: activeDroppable === undefined ? 'cancel' : 'drop',
+        });
+      },
+      abortController
+    );
+    window.addEventListener('keydown', onKeydown, abortController);
+    window.addEventListener(
+      'contextmenu',
+      () => handleStop({ reason: 'cancel' }),
+      abortController
+    );
+  }
 }
 
 export class Droppable<D = unknown, T extends D = D> {
-	#element: HTMLElement | undefined = $state.raw();
+  #element: HTMLElement | undefined = $state.raw();
 
-	readonly id = crypto.randomUUID();
+  readonly id = crypto.randomUUID();
 
-	constructor(protected readonly ctx: DndContext<D>) {
-		this.register = this.register.bind(this);
-	}
+  constructor(protected readonly ctx: DndContext<D>) {
+    this.register = this.register.bind(this);
+  }
 
-	get element() {
-		return this.#element;
-	}
+  get element() {
+    return this.#element;
+  }
 
-	get isOver() {
-		return this.ctx.targetId === this.id;
-	}
+  get isOver() {
+    return this.ctx.targetId === this.id;
+  }
 
-	[Symbol.dispose]() {
-		this.#element = undefined;
-		this.ctx.droppables.delete(this.id);
-	}
+  [Symbol.dispose]() {
+    this.#element = undefined;
+    this.ctx.droppables.delete(this.id);
+  }
 
-	register(el: HTMLElement) {
-		this.ctx.droppables.set(this.id, this);
-		this.#element = el;
-		return () => {
-			this[Symbol.dispose]();
-		};
-	}
+  register(el: HTMLElement) {
+    this.ctx.droppables.set(this.id, this);
+    this.#element = el;
+    return () => {
+      this[Symbol.dispose]();
+    };
+  }
 
-	accepts(data: D | undefined): data is T {
-		return true;
-	}
+  accepts(data: D | undefined): data is T {
+    return true;
+  }
 
-	[ON_ENTER]() {
-		this.onEnter();
-	}
+  [ON_ENTER]() {
+    this.onEnter();
+  }
 
-	[ON_MOVE](e: PointerEvent) {
-		this.onMove(e);
-	}
+  [ON_MOVE](e: PointerEvent) {
+    this.onMove(e);
+  }
 
-	[ON_LEAVE]() {
-		this.onLeave();
-	}
+  [ON_LEAVE]() {
+    this.onLeave();
+  }
 
-	[ON_DROP](data: T) {
-		this.onDrop(data);
-	}
+  [ON_DROP](data: T) {
+    this.onDrop(data);
+  }
 
-	protected onEnter() {}
+  protected onEnter() {}
 
-	protected onMove(_e: PointerEvent) {}
+  protected onMove(_e: PointerEvent) {}
 
-	protected onLeave() {}
+  protected onLeave() {}
 
-	protected onDrop(_data: T) {}
+  protected onDrop(_data: T) {}
 }
 
 export class ClonedGhost {
-	#element: HTMLElement;
-	#offsetX: number;
-	#offsetY: number;
+  #element: HTMLElement;
+  #offsetX: number;
+  #offsetY: number;
 
-	constructor(el: HTMLElement, e: PointerEvent) {
-		const rect = el.getBoundingClientRect();
-		this.#element = el.cloneNode(true) as HTMLElement;
-		this.#offsetX = e.clientX - rect.left;
-		this.#offsetY = e.clientY - rect.top;
+  constructor(el: HTMLElement, e: PointerEvent) {
+    const rect = el.getBoundingClientRect();
+    this.#element = el.cloneNode(true) as HTMLElement;
+    this.#offsetX = e.clientX - rect.left;
+    this.#offsetY = e.clientY - rect.top;
 
-		this.#element.style.position = 'fixed';
-		this.#element.style.left = '0';
-		this.#element.style.top = '0';
-		this.#element.style.width = `${rect.width}px`;
-		this.#element.style.height = `${rect.height}px`;
-		this.#element.style.pointerEvents = 'none';
-		this.#element.style.zIndex = '9999';
-		this.#element.style.opacity = '0.85';
-		this.onMove(e);
-	}
+    this.#element.style.position = 'fixed';
+    this.#element.style.left = '0';
+    this.#element.style.top = '0';
+    this.#element.style.width = `${rect.width}px`;
+    this.#element.style.height = `${rect.height}px`;
+    this.#element.style.pointerEvents = 'none';
+    this.#element.style.zIndex = '9999';
+    this.#element.style.opacity = '0.85';
+    this.onMove(e);
+  }
 
-	attach(root: ShadowRoot | Document | Node) {
-		root.appendChild(this.#element);
-		return this;
-	}
+  attach(root: ShadowRoot | Document | Node) {
+    root.appendChild(this.#element);
+    return this;
+  }
 
-	onMove(e: PointerEvent) {
-		const x = e.clientX - this.#offsetX;
-		const y = e.clientY - this.#offsetY;
-		this.#element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-	}
+  onMove(e: PointerEvent) {
+    const x = e.clientX - this.#offsetX;
+    const y = e.clientY - this.#offsetY;
+    this.#element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }
 
-	onStop() {
-		this.#element.remove();
-	}
+  onStop() {
+    this.#element.remove();
+  }
 }

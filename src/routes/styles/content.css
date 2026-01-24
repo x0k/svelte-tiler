@@ -1,15 +1,15 @@
 .content {
-	padding: 0 32px;
-	min-height: 0;
-	height: 100%;
-	overflow-y: scroll;
-	overflow-x: auto;
+  padding: 0 32px;
+  min-height: 0;
+  height: 100%;
+  overflow-y: scroll;
+  overflow-x: auto;
 
-	color: var(--color-text);
-	background: var(--color-bg);
+  color: var(--color-text);
+  background: var(--color-bg);
 
-	font-size: 16px;
-	line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 /* Headings */
@@ -20,152 +20,152 @@
 .content h4,
 .content h5,
 .content h6 {
-	font-weight: 600;
-	line-height: 1.25;
-	margin: 0;
-	padding: 24px 0 12px;
-	/* margin: 24px 0 12px; */
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+  padding: 24px 0 12px;
+  /* margin: 24px 0 12px; */
 }
 
 .content h1 {
-	font-size: 2em;
-	border-bottom: 1px solid var(--color-surface-alt);
-	padding-bottom: 8px;
+  font-size: 2em;
+  border-bottom: 1px solid var(--color-surface-alt);
+  padding-bottom: 8px;
 }
 
 .content h2 {
-	font-size: 1.6em;
-	border-bottom: 1px solid var(--color-surface-alt);
-	padding-bottom: 6px;
+  font-size: 1.6em;
+  border-bottom: 1px solid var(--color-surface-alt);
+  padding-bottom: 6px;
 }
 
 .content h3 {
-	font-size: 1.3em;
+  font-size: 1.3em;
 }
 .content h4 {
-	font-size: 1.1em;
+  font-size: 1.1em;
 }
 
 /* Text */
 
 .content p {
-	margin: 12px 0;
+  margin: 12px 0;
 }
 
 .content a {
-	color: var(--color-primary);
-	text-decoration: none;
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
 .content a:hover {
-	text-decoration: underline;
+  text-decoration: underline;
 }
 
 .content strong {
-	font-weight: 600;
+  font-weight: 600;
 }
 
 .content em {
-	font-style: italic;
+  font-style: italic;
 }
 
 /* Inline code */
 
 .content code {
-	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-	font-size: 0.95em;
-	background: var(--color-surface-alt);
-	padding: 0.15em 0.35em;
-	border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.95em;
+  background: var(--color-surface-alt);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
 }
 
 /* Code blocks */
 
 .content pre {
-	margin: 16px 0;
-	padding: 12px 16px;
-	border-radius: 4px;
-	overflow-x: auto;
-	background: var(--color-surface) !important;
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: 4px;
+  overflow-x: auto;
+  background: var(--color-surface) !important;
 }
 
 .content pre code {
-	background: none;
-	padding: 0;
-	font-size: 13px;
-	line-height: 1.5;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Blockquote */
 
 .content blockquote {
-	margin: 16px 0;
-	padding: 4px 16px;
-	color: var(--color-text-muted);
-	border-left: 4px solid var(--color-border);
+  margin: 16px 0;
+  padding: 4px 16px;
+  color: var(--color-text-muted);
+  border-left: 4px solid var(--color-border);
 }
 
 /* Lists */
 
 .content ul,
 .content ol {
-	margin: 12px 0 12px 24px;
+  margin: 12px 0 12px 24px;
 }
 
 .content li {
-	margin: 6px 0;
+  margin: 6px 0;
 }
 
 /* Horizontal rule */
 
 .content hr {
-	border: none;
-	border-top: 1px solid var(--color-border);
-	margin: 24px 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 24px 0;
 }
 
 /* Tables */
 
 .content table {
-	border-collapse: collapse;
-	margin: 16px 0;
-	width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  width: 100%;
 }
 
 .content th,
 .content td {
-	border: 1px solid var(--color-border);
-	padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  padding: 6px 10px;
 }
 
 .content th {
-	background: var(--color-surface-alt);
-	font-weight: 600;
+  background: var(--color-surface-alt);
+  font-weight: 600;
 }
 
 /* Images */
 
 .content img {
-	max-width: 100%;
-	display: block;
-	margin: 16px 0;
+  max-width: 100%;
+  display: block;
+  margin: 16px 0;
 }
 
 .shiki {
-	font-family: var(--font-mono);
-	font-size: 12pt;
-	line-height: 1.5;
+  font-family: var(--font-mono);
+  font-size: 12pt;
+  line-height: 1.5;
 }
 
 .code-preview {
-	min-height: 0;
-	height: 100%;
-	overflow-y: scroll;
-	overflow-x: auto;
-	background: var(--color-bg);
-	& pre {
-		outline: none;
-		margin: 0;
-		padding: 24px;
-	}
+  min-height: 0;
+  height: 100%;
+  overflow-y: scroll;
+  overflow-x: auto;
+  background: var(--color-bg);
+  & pre {
+    outline: none;
+    margin: 0;
+    padding: 24px;
+  }
 }

@@ -5,45 +5,45 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import Icons from 'unplugin-icons/vite';
 
 export default defineConfig({
-	plugins: [sveltekit(), devtoolsJson(), Icons({ compiler: 'svelte' })],
+  plugins: [sveltekit(), devtoolsJson(), Icons({ compiler: 'svelte' })],
 
-	server: {
-		watch: {
-			ignored: ['**/.direnv/**', '**/node_modules/**']
-		}
-	},
+  server: {
+    watch: {
+      ignored: ['**/.direnv/**', '**/node_modules/**'],
+    },
+  },
 
-	test: {
-		expect: { requireAssertions: true },
+  test: {
+    expect: { requireAssertions: true },
 
-		projects: [
-			{
-				extends: './vite.config.ts',
+    projects: [
+      {
+        extends: './vite.config.ts',
 
-				test: {
-					name: 'client',
+        test: {
+          name: 'client',
 
-					browser: {
-						enabled: true,
-						provider: playwright(),
-						instances: [{ browser: 'chromium', headless: true }]
-					},
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium', headless: true }],
+          },
 
-					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-					exclude: ['src/lib/server/**']
-				}
-			},
+          include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+          exclude: ['src/lib/server/**'],
+        },
+      },
 
-			{
-				extends: './vite.config.ts',
+      {
+        extends: './vite.config.ts',
 
-				test: {
-					name: 'server',
-					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
-				}
-			}
-		]
-	}
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['src/**/*.{test,spec}.{js,ts}'],
+          exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+        },
+      },
+    ],
+  },
 });

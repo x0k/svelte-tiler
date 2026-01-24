@@ -1,38 +1,41 @@
 <script lang="ts" module>
-	import { createContext, type Snippet } from 'svelte';
+  import { createContext, type Snippet } from 'svelte';
 
-	import type { Registry } from '$lib/shared/registry.js';
-	import type { TileProps, Tiles } from '$lib/model.js';
+  import type { Registry } from '$lib/shared/registry.js';
+  import type { TileProps, Tiles } from '$lib/model.js';
 
-	declare module '../model.js' {
-		interface TileRegistry {
-			leaf: {
-				name: string;
-			};
-		}
-	}
+  declare module '../model.js' {
+    interface TileRegistry {
+      leaf: {
+        name: string;
+      };
+    }
+  }
 
-	type LeafContext<N extends string = string> = Registry<N, Snippet<[Tiles['leaf']]> | undefined>;
+  type LeafContext<N extends string = string> = Registry<
+    N,
+    Snippet<[Tiles['leaf']]> | undefined
+  >;
 
-	const [getContext, setContext] = createContext<LeafContext>();
+  const [getContext, setContext] = createContext<LeafContext>();
 
-	export function setup<N extends string>(leafs: LeafContext<N>) {
-		setContext(leafs);
-		return (name: N): Tiles['leaf'] => ({
-			id: crypto.randomUUID(),
-			type: 'leaf',
-			name,
-			children: []
-		});
-	}
+  export function setup<N extends string>(leafs: LeafContext<N>) {
+    setContext(leafs);
+    return (name: N): Tiles['leaf'] => ({
+      id: crypto.randomUUID(),
+      type: 'leaf',
+      name,
+      children: [],
+    });
+  }
 
-	export function unmount() {}
+  export function unmount() {}
 </script>
 
 <script lang="ts">
-	const leafCtx = getContext();
+  const leafCtx = getContext();
 
-	let { tile = $bindable() }: TileProps<'leaf'> = $props();
+  let { tile = $bindable() }: TileProps<'leaf'> = $props();
 </script>
 
 {@render leafCtx.get(tile.name)?.(tile)}
