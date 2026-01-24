@@ -79,6 +79,7 @@
 .item .label {
 	overflow: hidden;
 	text-overflow: ellipsis;
+	user-select: none;
 }
 
 /* Folder / file */

@@ -1,23 +1,28 @@
 <script lang="ts">
-	import { fromConstant } from '$lib/shared/registry.js';
+	import { fromConstant, fromRecord } from '$lib/shared/registry.js';
 	import { Tiler, type Tiles } from '$lib/index.js';
 	import * as Split from '$lib/tiles/split.svelte';
 	import * as Leaf from '$lib/tiles/leaf.svelte';
 	import * as Tabs from '$lib/tiles/tabs.svelte';
 
-	import { markdownToHTML } from './lib/html.ts'
+	import { highlight, markdownToHTML } from './lib/html.ts';
 	import Sidebar from './components/sidebar.svelte';
 
 	import readmeMd from '../../README.md?raw';
 	import modelTs from '../lib/model.ts?raw';
+	import { getFileExtension } from './lib/file-tree.ts';
+	import FileIcon from './components/file-icon.svelte';
 
 	const FILES: Record<string, string> = {
-		"lib/model.ts": modelTs,
-		"README.md": readmeMd
-	}
+		'lib/model.ts': modelTs,
+		'README.md': readmeMd
+	};
 
 	const createLeaf = Leaf.setup(fromConstant(leaf));
 	const createTabs = Tabs.setup({
+		headers: fromRecord({
+			tabHeader
+		}),
 		createSplit({ parent, type, pivot, adjacent, offset }) {
 			if (parent?.type === 'split' && parent.direction === type) {
 				const index = parent.children.findIndex((c) => c.id === pivot.id);
@@ -43,7 +48,11 @@
 			children: [
 				createLeaf('sidebar'),
 				createTabs({
-					tabs: [['README.md', createLeaf('README.md')]]
+					tabHeader: 'tabHeader',
+					tabs: [
+						['README.md', createLeaf('README.md')],
+						['model.ts', createLeaf('lib/model.ts')]
+					]
 				})
 			],
 			constraints: [{ minWeight: 0.1, weight: 0.2, maxWeight: 0.4 }, {}]
@@ -55,12 +64,21 @@
 	<Tiler bind:tile tiles={{ split: Split, leaf: Leaf, tabs: Tabs }} />
 </div>
 
+{#snippet tabHeader(tile: Tiles['tabs'], i: number)}
+	<FileIcon extension={getFileExtension(tile.titles[i])} />
+	{tile.titles[i]}
+{/snippet}
+
 {#snippet leaf(tile: Tiles['leaf'])}
 	{#if tile.name === 'sidebar'}
 		<Sidebar files={FILES} />
-	{:else}
+	{:else if getFileExtension(tile.name) === 'md'}
 		<div class="content">
 			{@html markdownToHTML(FILES[tile.name])}
+		</div>
+	{:else}
+		<div class="code-preview">
+			{@html highlight(FILES[tile.name], getFileExtension(tile.name))}
 		</div>
 	{/if}
 {/snippet}

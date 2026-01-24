@@ -129,6 +129,10 @@
 	--md-inline-code: #fd971f;
 	--md-quote: #75715e;
 	--md-link: #ae81ff;
+
+	--font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'JetBrains Mono',
+		'Fira Code', monospace;
 }
 
 body {

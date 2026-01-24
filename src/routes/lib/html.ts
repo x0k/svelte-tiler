@@ -22,7 +22,6 @@ const shiki = createHighlighterCoreSync({
 marked.use({
 	renderer: {
 		code({ text, lang }) {
-			console.log(lang);
 			return shiki.codeToHtml(text, {
 				lang: lang ?? 'text',
 				theme: 'monokai'

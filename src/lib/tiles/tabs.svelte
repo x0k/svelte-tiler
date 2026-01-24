@@ -217,6 +217,9 @@
 				destroy();
 			} else {
 				unmount(tile, this.#index);
+				if (tile.selectedTab === this.#index) {
+					tile.selectedTab = Math.max(0, this.#index - 1);
+				}
 			}
 		}
 	}

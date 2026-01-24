@@ -4,7 +4,7 @@
 
 	import { buildTree } from '../lib/file-tree.js';
 
-	const { files }: { files: Record<string, string> } = $props()
+	const { files }: { files: Record<string, string> } = $props();
 
 	const tree = $derived(buildTree(files));
 </script>
@@ -20,7 +20,7 @@
 		</div>
 	</div>
 
-	<div class="explorer">
+	<div class="explorer" role="tree" tabindex="0">
 		{#each tree as node}
 			<ExplorerNode {node} />
 		{/each}

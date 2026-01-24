@@ -54,3 +54,8 @@ export function buildTree(files: Record<string, string>): TreeNode[] {
 
 	return root.children;
 }
+
+export function getFileExtension(filename: string) {
+	const index = filename.lastIndexOf('.');
+	return filename.slice(index + 1);
+}

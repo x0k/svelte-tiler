@@ -3,12 +3,12 @@
 	import ChevronDown from '~icons/codicon/chevron-down';
 	import FolderClosed from '~icons/vscode-icons/default-folder';
 	import FolderOpened from '~icons/vscode-icons/default-folder-opened';
-	import FileIcon from '~icons/vscode-icons/file-type-text';
 
-	import type { TreeNode } from '../lib/file-tree.js';
+	import { getFileExtension, type TreeNode } from '../lib/file-tree.js';
 	import ExplorerNode from './explorer-node.svelte';
+	import FileIcon from './file-icon.svelte';
 
-	const { node, level = 0 }: { node: TreeNode; level: number } = $props();
+	const { node, level = 0 }: { node: TreeNode; level?: number } = $props();
 
 	let open = $state(true);
 </script>
@@ -18,6 +18,8 @@
 		class="item folder indent"
 		style="padding-left: {12 + level * 16}px"
 		onclick={() => (open = !open)}
+		role="treeitem"
+		aria-expanded="true"
 	>
 		<span class="chevron">
 			{#if open}
@@ -44,7 +46,7 @@
 {:else}
 	<div class="item file indent" style="padding-left: {12 + level * 16}px">
 		<span class="chevron-placeholder"></span>
-		<FileIcon />
+		<FileIcon extension={getFileExtension(node.name)} />
 		<span class="label">{node.name}</span>
 	</div>
 {/if}
