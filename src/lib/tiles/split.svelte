@@ -1,5 +1,11 @@
 <script lang="ts" module>
-  import { getContext, setContext, type Snippet } from 'svelte';
+  import {
+    flushSync,
+    getContext,
+    setContext,
+    tick,
+    type Snippet,
+  } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -10,6 +16,7 @@
   } from '$lib/shared/constraints.js';
   import { almostEqual } from '$lib/shared/geometry.js';
   import type { Tile, TileProps, Tiles } from '$lib/model.js';
+  import type { TilerContext } from '$lib/context.svelte.js';
 
   export type Direction = 'row' | 'column';
 
@@ -77,10 +84,43 @@
     return create<R>;
   }
 
-  export function unmount(tile: Tiles['split'], index: number) {
-    tile.children.splice(index, 1);
-    tile.weights.splice(index, 1);
-    tile.constraints.splice(index, 1);
+  export function removeChild(
+    ctx: TilerContext,
+    tile: Tiles['split'],
+    i: number
+  ) {
+    if (tile.children.length > 2) {
+      tile.children.splice(i, 1);
+      tile.weights.splice(i, 1);
+      tile.constraints.splice(i, 1);
+      return true;
+    }
+    const parent = ctx.getTileParent(tile);
+    if (parent === undefined) {
+      return false;
+    }
+    const index = parent.children.findIndex((c) => c.id === tile.id);
+    if (index < 0) {
+      return false;
+    }
+    if (tile.children.length === 2) {
+      tick().then(() => {
+        parent.children[index] = tile.children[1 - i];
+      });
+      return true;
+    } else {
+      return ctx.removeChild(parent, index);
+    }
+  }
+
+  export function insertTile(
+    node: Tiles['split'],
+    index: number,
+    { tile, constraints = [], weight = 1 }: SplitTileOptions
+  ) {
+    node.children.splice(index, 0, tile);
+    node.constraints.splice(index, 0, constraints);
+    node.weights.splice(index, 0, weight);
   }
 </script>
 

@@ -128,7 +128,11 @@ export class Draggable<D = unknown> {
       currentTarget: HTMLElement;
     }
   ) {
-    if (event.button !== 0 || !event.isPrimary) {
+    if (
+      event.button !== 0 ||
+      !event.isPrimary ||
+      event.composedPath().some((n) => n instanceof HTMLButtonElement)
+    ) {
       return;
     }
 

@@ -20,13 +20,12 @@ export type TileProps<T extends TileType> = {
   tile: Tiles[T];
   parent: Tile | undefined;
   index: number;
-  unmount: () => void;
+  destroy: () => void;
   child: Snippet<[number]>;
 };
 
-export interface TileDefinition<T extends TileType> {
-  default: Component<TileProps<T>, {}, 'tile' | 'parent'>;
-  unmount: (tile: Tiles[T], index: number) => void;
-}
-
-export type TileDefinitions = { [T in TileType]: TileDefinition<T> };
+export type TileComponent<T extends TileType> = Component<
+  TileProps<T>,
+  {},
+  'tile' | 'parent'
+>;

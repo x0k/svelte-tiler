@@ -157,16 +157,18 @@ body {
 }
 
 button {
-  background: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  font: inherit;
-  color: inherit;
-  text-align: inherit;
+.button {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
 
-  appearance: none;
-  -webkit-appearance: none;
-  border-radius: 0;
+  &:hover {
+    background: var(--color-surface-hover);
+  }
 }

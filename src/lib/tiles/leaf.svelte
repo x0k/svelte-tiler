@@ -29,7 +29,9 @@
     });
   }
 
-  export function unmount() {}
+  export function removeChild() {
+    return false
+  }
 </script>
 
 <script lang="ts">

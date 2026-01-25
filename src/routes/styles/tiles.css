@@ -62,6 +62,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg);
 }
 
 [data-tabs-bar] {
@@ -107,7 +108,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 1rem;
+  padding-left: 1rem;
+  padding-right: 0.4rem;
   background: var(--color-surface-alt);
   color: var(--color-text-muted);
   font-size: 12pt;
@@ -116,6 +118,7 @@
 
   &[data-selected='true'] {
     background: var(--color-bg);
+    color: var(--color-text);
   }
   &[data-over='true'] {
     &::after {
@@ -139,7 +142,6 @@
   flex: 1 1 0;
   position: relative;
   overflow: hidden;
-  background: var(--color-bg);
   &::after {
     content: '';
     position: absolute;

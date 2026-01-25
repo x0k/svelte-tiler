@@ -1,39 +1,46 @@
 <script lang="ts">
-  import { getTilerContext } from './context.ts';
-  import { TILE_DEFINITIONS } from './internal.ts';
+  import { getTilerContext } from './context.svelte.ts';
   import type { Tile } from './model.ts';
   import Self from './render.svelte';
 
   let {
     tile = $bindable(),
-    unmount,
+    destroy,
     parent = $bindable(),
     index,
   }: {
     tile: Tile;
     parent: Tile | undefined;
     index: number;
-    unmount: () => void;
+    destroy: () => void;
   } = $props();
 
   const ctx = getTilerContext();
 
-  const def = $derived(ctx[TILE_DEFINITIONS][tile.type]);
+  $effect(() => {
+    if (parent) {
+      ctx.registerParent(tile, parent)
+    }
+  })
+
+  const TileComponent = $derived(ctx.getTileComponent(tile));
 </script>
 
 {#snippet child(index: number)}
   <Self
     bind:parent={tile}
     bind:tile={tile.children[index]}
-    unmount={() => {
-      if (tile.children.length === 1) {
-        unmount();
-      } else {
-        def.unmount(tile as never, index);
-      }
+    destroy={() => {
+      ctx.removeChild(tile, index);
     }}
     {index}
   />
 {/snippet}
 
-<def.default bind:parent bind:tile={tile as never} {unmount} {index} {child} />
+<TileComponent
+  bind:parent
+  bind:tile={tile as never}
+  {destroy}
+  {index}
+  {child}
+/>

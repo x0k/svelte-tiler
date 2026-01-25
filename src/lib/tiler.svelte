@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
-    createTilerContext,
     setTilerContext,
+    TilerContext,
     type TilerContextOptions,
-  } from './context.js';
+  } from './context.svelte.ts';
   import type { Tile } from './model.js';
   import Panel from './panel.svelte';
 
@@ -12,7 +12,7 @@
     ...rest
   }: { layout: Tile | undefined } & TilerContextOptions = $props();
 
-  setTilerContext(createTilerContext(rest));
+  setTilerContext(new TilerContext(rest));
 </script>
 
 <Panel bind:layout />
