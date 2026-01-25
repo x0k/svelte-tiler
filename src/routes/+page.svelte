@@ -4,6 +4,7 @@
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
+  import { Draggable } from '$lib/shared/dnd.svelte.js';
   import {
     setTilerContext,
     Panel,
@@ -21,7 +22,6 @@
 
   import readmeMd from '../../README.md?raw';
   import modelTs from '../lib/model.ts?raw';
-  import { Draggable } from '$lib/shared/dnd.svelte.ts';
 
   const FILES: Record<string, string> = {
     'lib/model.ts': modelTs,
@@ -45,7 +45,11 @@
       actions,
     }),
     createSplit({ parent, type, pivot, adjacent, offset }) {
-      if (parent?.type === 'split' && parent.direction === type) {
+      if (
+        parent?.type === 'split' &&
+        parent.direction === type &&
+        parent.id !== layout.id
+      ) {
         const index =
           parent.children.findIndex((c) => c.id === pivot.id) + offset;
         Split.insertTile(parent, index, {
