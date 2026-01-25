@@ -108,8 +108,8 @@
 
 .chevron,
 .chevron-placeholder {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,32 +117,8 @@
 }
 
 .chevron svg {
-  width: 12px;
-  height: 12px;
-  color: var(--color-text-muted);
-}
-
-/* Keep files aligned with folders */
-
-.chevron-placeholder {
-  visibility: hidden;
-}
-
-/* Chevron column */
-
-.chevron,
-.chevron-placeholder {
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.chevron svg {
-  width: 12px;
-  height: 12px;
+  /* width: 12px;
+  height: 12px; */
   color: var(--color-text-muted);
 }
 

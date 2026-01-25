@@ -162,7 +162,6 @@
   let {
     tile = $bindable(),
     parent = $bindable(),
-    destroy: unmount,
     child,
   }: TileProps<'tabs'> = $props();
 
@@ -192,7 +191,7 @@
     }
   }
 
-  class DroppableSpacer extends TabsDroppable {
+  class DroppableSurface extends TabsDroppable {
     protected onDrop(tabs: Tiles['tabs']): void {
       insertTabs(tile, tile.children.length, tabs);
     }
@@ -288,12 +287,13 @@
       if (reason !== 'drop') {
         return;
       }
-      removeChild(ctx, tile, this.#index);
+      ctx.removeChild(tile, this.#index);
     }
   }
 
-  const droppableSpacer = $derived(new DroppableSpacer(ctx.dnd));
+  const droppableSpacer = $derived(new DroppableSurface(ctx.dnd));
   const droppableContent = $derived(new DroppableContent(ctx.dnd, EDGE_RATIO));
+  const droppableEmpty = $derived(new DroppableContent(ctx.dnd, EDGE_RATIO));
 </script>
 
 {#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}
@@ -356,7 +356,15 @@
       {@render child(tile.selectedTab)}
     </div>
   {:else}
-    {@render empty?.(tile)}
+    <div
+      data-tabs-empty
+      {@attach droppableEmpty.register}
+      data-over={droppableEmpty.isOver}
+      data-hpart={droppableEmpty.hpart}
+      data-vpart={droppableEmpty.vpart}
+    >
+      {@render empty?.(tile)}
+    </div>
   {/if}
 </div>
 

@@ -1,26 +1,48 @@
 <script lang="ts">
   import ChevronRight from '~icons/codicon/chevron-right';
   import ChevronDown from '~icons/codicon/chevron-down';
-  import FolderClosed from '~icons/codicon/folder';
-  import FolderOpened from '~icons/codicon/folder-opened';
+
+  import { Draggable } from '$lib/shared/dnd.svelte.js';
+  import { getTilerContext } from '$lib/index.js';
 
   import { getFileExtension, type TreeNode } from '../lib/file-tree.js';
   import ExplorerNode from './explorer-node.svelte';
   import FileIcon from './file-icon.svelte';
   import FolderIcon from './folder-icon.svelte';
 
-  const { node, level = 0 }: { node: TreeNode; level?: number } = $props();
+  const {
+    node,
+    level = 0,
+    createDraggable,
+  }: {
+    node: TreeNode;
+    level?: number;
+    createDraggable: (node: TreeNode) => Draggable;
+  } = $props();
 
   let open = $state(true);
+
+  const ctx = getTilerContext();
+
+  const draggable = $derived(createDraggable(node));
 </script>
 
 {#if node.type === 'folder'}
   <div
+    {@attach draggable.register}
     class="item folder indent"
     style="padding-left: {12 + level * 16}px"
     onclick={() => (open = !open)}
     role="treeitem"
     aria-expanded="true"
+    aria-selected="false"
+    tabindex="0"
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.currentTarget.click();
+      }
+    }}
   >
     <span class="chevron">
       {#if open}
@@ -37,11 +59,15 @@
 
   {#if open}
     {#each node.children as child}
-      <ExplorerNode node={child} level={level + 1} />
+      <ExplorerNode {createDraggable} node={child} level={level + 1} />
     {/each}
   {/if}
 {:else}
-  <div class="item file indent" style="padding-left: {12 + level * 16}px">
+  <div
+    {@attach draggable.register}
+    class="item file indent"
+    style="padding-left: {12 + level * 16}px"
+  >
     <span class="chevron-placeholder"></span>
     <FileIcon extension={getFileExtension(node.name)} />
     <span class="label">{node.name}</span>

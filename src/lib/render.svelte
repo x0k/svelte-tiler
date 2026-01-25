@@ -5,42 +5,27 @@
 
   let {
     tile = $bindable(),
-    destroy,
     parent = $bindable(),
     index,
   }: {
     tile: Tile;
     parent: Tile | undefined;
     index: number;
-    destroy: () => void;
   } = $props();
 
   const ctx = getTilerContext();
 
   $effect(() => {
     if (parent) {
-      ctx.registerParent(tile, parent)
+      ctx.registerParent(tile, parent);
     }
-  })
+  });
 
   const TileComponent = $derived(ctx.getTileComponent(tile));
 </script>
 
 {#snippet child(index: number)}
-  <Self
-    bind:parent={tile}
-    bind:tile={tile.children[index]}
-    destroy={() => {
-      ctx.removeChild(tile, index);
-    }}
-    {index}
-  />
+  <Self bind:parent={tile} bind:tile={tile.children[index]} {index} />
 {/snippet}
 
-<TileComponent
-  bind:parent
-  bind:tile={tile as never}
-  {destroy}
-  {index}
-  {child}
-/>
+<TileComponent bind:parent bind:tile={tile as never} {index} {child} />

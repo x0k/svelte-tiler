@@ -1,10 +1,19 @@
 <script lang="ts">
   import GitHub from '~icons/codicon/github-inverted';
+
+  import type { Draggable } from '$lib/shared/dnd.svelte.js';
+
+  import { buildTree, type TreeNode } from '../lib/file-tree.js';
   import ExplorerNode from './explorer-node.svelte';
 
-  import { buildTree } from '../lib/file-tree.js';
+  const {
+    files,
+    createDraggable,
+  }: {
+    files: Record<string, string>;
 
-  const { files }: { files: Record<string, string> } = $props();
+    createDraggable: (node: TreeNode) => Draggable;
+  } = $props();
 
   const tree = $derived(buildTree(files));
 </script>
@@ -26,7 +35,7 @@
 
   <div class="explorer" role="tree" tabindex="0">
     {#each tree as node}
-      <ExplorerNode {node} />
+      <ExplorerNode {node} {createDraggable} />
     {/each}
   </div>
 </div>

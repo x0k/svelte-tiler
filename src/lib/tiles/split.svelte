@@ -104,8 +104,17 @@
       return false;
     }
     if (tile.children.length === 2) {
+      const id = tile.children[i].id;
       tick().then(() => {
-        parent.children[index] = tile.children[1 - i];
+        if (tile.children.length === 2) {
+          parent.children[index] = tile.children[1 - i];
+        } else {
+          removeChild(
+            ctx,
+            tile,
+            tile.children.findIndex((c) => c.id === id)
+          );
+        }
       });
       return true;
     } else {

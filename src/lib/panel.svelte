@@ -8,7 +8,6 @@
 {#if layout}
   <Render
     bind:tile={layout}
-    destroy={() => (layout = undefined)}
     bind:parent={() => undefined, (t) => (layout = t)}
     index={0}
   />

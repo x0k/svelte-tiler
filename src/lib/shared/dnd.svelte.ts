@@ -72,7 +72,7 @@ export class Draggable<D = unknown> {
 
   constructor(
     protected readonly ctx: DndContext<D>,
-    protected readonly options?: DraggableOptions<D>
+    protected readonly options: DraggableOptions<D> = {}
   ) {
     this.register = this.register.bind(this);
   }
@@ -174,7 +174,7 @@ export class Draggable<D = unknown> {
       const nextDroppable = this.ctx.findDroppable(
         e.clientX,
         e.clientY,
-        this.options?.data
+        this.options.data
       );
       if (activeDroppable !== nextDroppable) {
         activeDroppable?.[ON_LEAVE]();
@@ -194,7 +194,7 @@ export class Draggable<D = unknown> {
       }
 
       const snap =
-        ev.reason === 'drop' ? $state.snapshot(this.options?.data) : undefined;
+        ev.reason === 'drop' ? $state.snapshot(this.options.data) : undefined;
       activeDroppable?.[ON_LEAVE]();
 
       feedback?.onStop(ev);

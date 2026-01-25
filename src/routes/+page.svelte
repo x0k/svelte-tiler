@@ -21,6 +21,7 @@
 
   import readmeMd from '../../README.md?raw';
   import modelTs from '../lib/model.ts?raw';
+  import { Draggable } from '$lib/shared/dnd.svelte.ts';
 
   const FILES: Record<string, string> = {
     'lib/model.ts': modelTs,
@@ -141,7 +142,22 @@
 
 {#snippet leaf(tile: Tiles['leaf'])}
   {#if tile.name === 'sidebar'}
-    <Sidebar files={FILES} />
+    <Sidebar
+      files={FILES}
+      createDraggable={(node) =>
+        new Draggable(ctx.dnd, {
+          data:
+            node.type === 'file'
+              ? createTabs({
+                  tabHeader: 'tabHeader',
+                  actions: 'actions',
+                  tabs: [[node.name, createLeaf(node.path)]],
+                })
+              : createTabs({
+                  tabs: [],
+                }),
+        })}
+    />
   {:else if getFileExtension(tile.name) === 'md'}
     <div class="content">
       {@html markdownToHTML(FILES[tile.name])}

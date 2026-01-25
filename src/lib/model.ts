@@ -20,7 +20,6 @@ export type TileProps<T extends TileType> = {
   tile: Tiles[T];
   parent: Tile | undefined;
   index: number;
-  destroy: () => void;
   child: Snippet<[number]>;
 };
 
