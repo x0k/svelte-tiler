@@ -288,11 +288,7 @@
       if (reason !== 'drop') {
         return;
       }
-      if (tile.children.length === 1) {
-        unmount();
-      } else {
-        removeChild(ctx, tile, this.#index);
-      }
+      removeChild(ctx, tile, this.#index);
     }
   }
 
