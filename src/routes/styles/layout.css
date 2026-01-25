@@ -143,6 +143,8 @@
   --scrollbar-thumb: oklab(54.67100000000001% -0.00371 0.02853 / 0.45);
   --scrollbar-thumb-hover: rgba(117, 113, 94, 0.7);
   --scrollbar-thumb-active: rgba(117, 113, 94, 0.9);
+
+  --top-bar-height: 38px;
 }
 
 body {

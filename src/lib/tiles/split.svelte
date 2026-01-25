@@ -144,7 +144,6 @@
           totalWeight: this.totalWeight,
         })
       );
-      console.log(this.constraints);
     }
 
     protected onMove(e: PointerEvent) {
