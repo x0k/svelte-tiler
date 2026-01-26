@@ -4,8 +4,16 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import Icons from 'unplugin-icons/vite';
 
+import { markedImport, shikiImport } from './src/vite-plugins.js';
+
 export default defineConfig({
-  plugins: [sveltekit(), devtoolsJson(), Icons({ compiler: 'svelte' })],
+  plugins: [
+    sveltekit(),
+    devtoolsJson(),
+    Icons({ compiler: 'svelte' }),
+    markedImport(),
+    shikiImport(),
+  ],
 
   server: {
     watch: {

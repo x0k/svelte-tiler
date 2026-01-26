@@ -15,7 +15,6 @@
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
 
-  import { highlight, markdownToHTML } from './lib/html.ts';
   import {
     buildTree,
     getFileExtension,
@@ -25,15 +24,15 @@
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
 
-  import readmeMd from '../../README.md?raw';
-  import modelTs from '../lib/model.ts?raw';
+  const files = import.meta.glob('./lib/**/*', {
+    base: '../',
+    import: 'default',
+    query: '?shiki',
+  }) as Record<string, () => Promise<string>>;
+  files['./README.md'] = () =>
+    import('../../README.md?marked').then((m) => m.default);
 
-  const FILES: Record<string, string> = {
-    'lib/model.ts': modelTs,
-    'README.md': readmeMd,
-  };
-
-  let activeTabs: Tiles['tabs'] | undefined;
+  let activeTabs: Tiles['tabs'];
   const ctx = new TilerContext({
     tiles: { split: Split, leaf: Leaf, tabs: Tabs },
     effects: {
@@ -108,14 +107,14 @@
               {
                 tile: createTabs({
                   tabHeader: 'tabHeader',
-                  tabs: [['README.md', createFileLeaf('README.md')]],
+                  tabs: [['README.md', createFileLeaf('./README.md')]],
                 }),
                 constraints: defaultConstraints,
               },
               {
                 tile: createTabs({
                   tabHeader: 'tabHeader',
-                  tabs: [['model.ts', createFileLeaf('lib/model.ts')]],
+                  tabs: [['model.ts', createFileLeaf('./lib/model.ts')]],
                 }),
                 constraints: defaultConstraints,
               },
@@ -147,7 +146,7 @@
     }
   }
 
-  const tree = buildTree(FILES);
+  const tree = buildTree(files);
 </script>
 
 <div class="app">
@@ -184,30 +183,28 @@
               },
             })}
           onFileClick={(node) => {
-            if (activeTabs) {
-              const index = activeTabs.children.findIndex(
-                (c) => c.id === node.path
-              );
-              if (index < 0) {
-                Tabs.insertTabs(activeTabs, activeTabs.children.length, {
-                  titles: [node.name],
-                  children: [createFileLeaf(node.path)],
-                });
-              } else {
-                activeTabs.selectedTab = index;
-              }
+            const index = activeTabs.children.findIndex(
+              (c) => c.id === node.path
+            );
+            if (index < 0) {
+              Tabs.insertTabs(activeTabs, activeTabs.children.length, {
+                titles: [node.name],
+                children: [createFileLeaf(node.path)],
+              });
+            } else {
+              activeTabs.selectedTab = index;
             }
           }}
         />
       {/each}
     </Sidebar>
-  {:else if getFileExtension(tile.name) === 'md'}
-    <div class="content">
-      {@html markdownToHTML(FILES[tile.name])}
-    </div>
   {:else}
-    <div class="code-preview">
-      {@html highlight(FILES[tile.name], getFileExtension(tile.name))}
+    <div
+      class={getFileExtension(tile.name) === 'md' ? 'content' : 'code-preview'}
+    >
+      {#await files[tile.id]() then content}
+        {@html content}
+      {/await}
     </div>
   {/if}
 {/snippet}

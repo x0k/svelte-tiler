@@ -12,7 +12,7 @@ export type FolderNode = {
 
 export type TreeNode = FileNode | FolderNode;
 
-export function buildTree(files: Record<string, string>): TreeNode[] {
+function parseTree(files: Record<string, any>): TreeNode[] {
   const root: FolderNode = {
     type: 'folder',
     name: '',
@@ -33,6 +33,8 @@ export function buildTree(files: Record<string, string>): TreeNode[] {
           name: part,
           path: fullPath,
         });
+      } else if (part === '.') {
+        continue;
       } else {
         let folder = current.children.find(
           (n): n is FolderNode => n.type === 'folder' && n.name === part
@@ -53,6 +55,29 @@ export function buildTree(files: Record<string, string>): TreeNode[] {
   }
 
   return root.children;
+}
+
+const ORDER: Record<TreeNode['type'], number> = {
+  file: 0,
+  folder: 1,
+};
+
+function sortTree(tree: TreeNode[]): TreeNode[] {
+  return tree
+    .map((n) =>
+      n.type === 'folder' ? { ...n, children: sortTree(n.children) } : n
+    )
+    .sort((a, b) => {
+      const d = ORDER[b.type] - ORDER[a.type];
+      if (d !== 0) {
+        return d;
+      }
+      return a.name.localeCompare(b.name);
+    });
+}
+
+export function buildTree(files: Record<string, any>) {
+  return sortTree(parseTree(files));
 }
 
 export function getFileExtension(filename: string) {

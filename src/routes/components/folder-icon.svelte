@@ -1,4 +1,6 @@
 <script lang="ts" module>
+  import type { Component } from 'svelte';
+
   import Folder from '~icons/codicon/folder';
   import FolderOpen from '~icons/codicon/folder-opened';
 
@@ -7,11 +9,18 @@
 
   import MaterialIconThemeFolderDocs from '~icons/material-icon-theme/folder-docs';
   import MaterialIconThemeFolderDocsOpen from '~icons/material-icon-theme/folder-docs-open';
-  import type { Component } from 'svelte';
+
+  import MaterialIconThemeFolderShared from '~icons/material-icon-theme/folder-shared';
+  import MaterialIconThemeFolderSharedOpen from '~icons/material-icon-theme/folder-shared-open';
+
+  import MaterialIconThemeFolderUi from '~icons/material-icon-theme/folder-ui';
+  import MaterialIconThemeFolderUiOpen from '~icons/material-icon-theme/folder-ui-open';
 
   const icons: Record<string, [Component, Component]> = {
     lib: [MaterialIconThemeFolderLib, MaterialIconThemeFolderLibOpen],
     docs: [MaterialIconThemeFolderDocs, MaterialIconThemeFolderDocsOpen],
+    shared: [MaterialIconThemeFolderShared, MaterialIconThemeFolderSharedOpen],
+    tiles: [MaterialIconThemeFolderUi, MaterialIconThemeFolderUiOpen]
   };
   const defaultIcons = [Folder, FolderOpen];
 </script>

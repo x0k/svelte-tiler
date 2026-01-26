@@ -9,6 +9,15 @@ declare global {
     // interface PageState {}
     // interface Platform {}
   }
+  declare module '*?shiki' {
+    const src: string;
+    export default src;
+  }
+
+  declare module '*?marked' {
+    const src: string;
+    export default src;
+  }
 }
 
 export {};
