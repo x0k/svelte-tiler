@@ -37,6 +37,11 @@
     { type: 'minSize', unit: 'weight', value: 0.2 },
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
+  function createFileLeaf(path: string) {
+    const leaf = createLeaf(path)
+    leaf.id = path
+    return leaf
+  }
   const createTabs = Tabs.setup({
     headers: fromRecord({
       tabHeader,
@@ -95,7 +100,7 @@
                 tile: createTabs({
                   tabHeader: 'tabHeader',
                   actions: 'actions',
-                  tabs: [['README.md', createLeaf('README.md')]],
+                  tabs: [['README.md', createFileLeaf('README.md')]],
                 }),
                 constraints: defaultConstraints,
               },
@@ -103,7 +108,7 @@
                 tile: createTabs({
                   tabHeader: 'tabHeader',
                   actions: 'actions',
-                  tabs: [['model.ts', createLeaf('lib/model.ts')]],
+                  tabs: [['model.ts', createFileLeaf('lib/model.ts')]],
                 }),
                 constraints: defaultConstraints,
               },
@@ -155,7 +160,7 @@
               ? createTabs({
                   tabHeader: 'tabHeader',
                   actions: 'actions',
-                  tabs: [[node.name, createLeaf(node.path)]],
+                  tabs: [[node.name, createFileLeaf(node.path)]],
                 })
               : createTabs({
                   tabs: [],

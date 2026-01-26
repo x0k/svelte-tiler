@@ -12,7 +12,7 @@
 
   const {
     node,
-    level = 0,
+    level = 1,
     createDraggable,
   }: {
     node: TreeNode;
@@ -22,19 +22,19 @@
 
   let open = $state(true);
 
-  const ctx = getTilerContext();
-
   const draggable = $derived(createDraggable(node));
+
+  const padding = $derived(level * 10)
 </script>
 
 {#if node.type === 'folder'}
   <div
     {@attach draggable.register}
     class="item folder indent"
-    style="padding-left: {12 + level * 16}px"
+    style="padding-left: {padding}px"
     onclick={() => (open = !open)}
     role="treeitem"
-    aria-expanded="true"
+    aria-expanded={open}
     aria-selected="false"
     tabindex="0"
     onkeydown={(e) => {
@@ -66,7 +66,7 @@
   <div
     {@attach draggable.register}
     class="item file indent"
-    style="padding-left: {12 + level * 16}px"
+    style="padding-left: {padding}px"
   >
     <span class="chevron-placeholder"></span>
     <FileIcon extension={getFileExtension(node.name)} />

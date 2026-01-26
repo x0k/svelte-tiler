@@ -79,7 +79,6 @@
   min-width: 0;
   overflow-x: auto;
   gap: var(--tabs-bar-gap);
-  padding-right: calc((var(--drop-indicator-width) + var(--tabs-bar-gap)) / 2);
   &::-webkit-scrollbar {
     height: calc(var(--scrollbar-size) / 2);
     width: calc(var(--scrollbar-size) / 2);
@@ -93,7 +92,7 @@
     content: '';
     background: var(--color-text);
     position: absolute;
-    left: calc((var(--drop-indicator-width) + var(--tabs-bar-gap)) / 2 * -1);
+    left: 0;
     top: 0;
     bottom: 0;
     width: var(--drop-indicator-width);
@@ -126,18 +125,17 @@
   }
   &[data-over='true'] {
     &::after {
+      z-index: 100;
       content: '';
       position: absolute;
       background: var(--color-text);
       top: 0;
       bottom: 0;
-      left: calc(
-        100% - (var(--drop-indicator-width) + var(--tabs-bar-gap)) / 2
-      );
+      left: 0;
       width: var(--drop-indicator-width);
     }
-    &[data-hpart='start']::after {
-      left: calc((var(--drop-indicator-width) + var(--tabs-bar-gap)) / 2 * -1);
+    &[data-hpart='end']::after {
+      left: calc(100% - var(--drop-indicator-width));
     }
   }
 }
