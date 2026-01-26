@@ -1,15 +1,9 @@
 <script lang="ts">
-  import CodiconCopy from '~icons/codicon/copy';
   import CodiconClose from '~icons/codicon/close';
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
-  import {
-    DndContext,
-    Draggable,
-    type DraggableOptions,
-    type StopEvent,
-  } from '$lib/shared/dnd.svelte.js';
+  import { Draggable, type StopEvent } from '$lib/shared/dnd.svelte.js';
   import {
     setTilerContext,
     Panel,
@@ -22,9 +16,14 @@
   import * as Tabs from '$lib/tiles/tabs.svelte';
 
   import { highlight, markdownToHTML } from './lib/html.ts';
-  import { getFileExtension, type TreeNode } from './lib/file-tree.ts';
+  import {
+    buildTree,
+    getFileExtension,
+    type TreeNode,
+  } from './lib/file-tree.ts';
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
+  import ExplorerNode from './components/explorer-node.svelte';
 
   import readmeMd from '../../README.md?raw';
   import modelTs from '../lib/model.ts?raw';
@@ -34,8 +33,15 @@
     'README.md': readmeMd,
   };
 
+  let activeTabs: Tiles['tabs'] | undefined;
   const ctx = new TilerContext({
     tiles: { split: Split, leaf: Leaf, tabs: Tabs },
+    effects: {
+      tabs: (tile) => {
+        tile.selectedTab;
+        activeTabs = tile;
+      },
+    },
   });
   setTilerContext(ctx);
 
@@ -51,9 +57,6 @@
   const createTabs = Tabs.setup({
     headers: fromRecord({
       tabHeader,
-    }),
-    actions: fromRecord({
-      actions,
     }),
     createSplit({ parent, type, pivot, adjacent, offset }) {
       if (
@@ -105,7 +108,6 @@
               {
                 tile: createTabs({
                   tabHeader: 'tabHeader',
-                  actions: 'actions',
                   tabs: [['README.md', createFileLeaf('README.md')]],
                 }),
                 constraints: defaultConstraints,
@@ -113,7 +115,6 @@
               {
                 tile: createTabs({
                   tabHeader: 'tabHeader',
-                  actions: 'actions',
                   tabs: [['model.ts', createFileLeaf('lib/model.ts')]],
                 }),
                 constraints: defaultConstraints,
@@ -132,23 +133,21 @@
     return node.children.flatMap(treeNodeToTabs);
   }
 
-  class DraggableNode extends Draggable<Tile> {
-    #onDrop: () => void;
-    constructor(
-      ctx: DndContext<Tile>,
-      options: DraggableOptions<Tile> & {
-        onDrop: () => void;
-      }
-    ) {
-      super(ctx, options);
-      this.#onDrop = options.onDrop;
+  class DraggableTreeNode extends Draggable<Tile> {
+    #lastData: Tile | undefined;
+
+    get data() {
+      return (this.#lastData ??= this.options.data);
     }
+
     protected onStop(e: StopEvent): void {
       if (e.reason === 'drop') {
-        this.#onDrop();
+        this.#lastData = undefined;
       }
     }
   }
+
+  const tree = buildTree(FILES);
 </script>
 
 <div class="app">
@@ -169,37 +168,39 @@
   </button>
 {/snippet}
 
-{#snippet actions()}
-  <button
-    class="button"
-    onclick={() => {
-      console.log('copy click');
-    }}
-  >
-    <CodiconCopy />
-  </button>
-{/snippet}
-
 {#snippet leaf(tile: Tiles['leaf'])}
   {#if tile.name === 'sidebar'}
-    <Sidebar
-      files={FILES}
-      createDraggable={(node) => {
-        let data: Tile | undefined;
-        return new DraggableNode(ctx.dnd, {
-          get data() {
-            return (data ??= createTabs({
-              tabHeader: 'tabHeader',
-              actions: 'actions',
-              tabs: treeNodeToTabs(node),
-            }));
-          },
-          onDrop: () => {
-            data!.id = crypto.randomUUID();
-          },
-        });
-      }}
-    />
+    <Sidebar>
+      {#each tree as node}
+        <ExplorerNode
+          {node}
+          createDraggable={(node) =>
+            new DraggableTreeNode(ctx.dnd, {
+              get data() {
+                return createTabs({
+                  tabHeader: 'tabHeader',
+                  tabs: treeNodeToTabs(node),
+                });
+              },
+            })}
+          onFileClick={(node) => {
+            if (activeTabs) {
+              const index = activeTabs.children.findIndex(
+                (c) => c.id === node.path
+              );
+              if (index < 0) {
+                Tabs.insertTabs(activeTabs, activeTabs.children.length, {
+                  titles: [node.name],
+                  children: [createFileLeaf(node.path)],
+                });
+              } else {
+                activeTabs.selectedTab = index;
+              }
+            }
+          }}
+        />
+      {/each}
+    </Sidebar>
   {:else if getFileExtension(tile.name) === 'md'}
     <div class="content">
       {@html markdownToHTML(FILES[tile.name])}

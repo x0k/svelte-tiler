@@ -3,9 +3,8 @@
   import ChevronDown from '~icons/codicon/chevron-down';
 
   import { Draggable } from '$lib/shared/dnd.svelte.js';
-  import { getTilerContext } from '$lib/index.js';
 
-  import { getFileExtension, type TreeNode } from '../lib/file-tree.js';
+  import { getFileExtension, type FileNode, type TreeNode } from '../lib/file-tree.js';
   import ExplorerNode from './explorer-node.svelte';
   import FileIcon from './file-icon.svelte';
   import FolderIcon from './folder-icon.svelte';
@@ -14,10 +13,12 @@
     node,
     level = 1,
     createDraggable,
+    onFileClick,
   }: {
     node: TreeNode;
     level?: number;
     createDraggable: (node: TreeNode) => Draggable;
+    onFileClick: (node: FileNode) => void;
   } = $props();
 
   let open = $state(true);
@@ -59,14 +60,24 @@
 
   {#if open}
     {#each node.children as child}
-      <ExplorerNode {createDraggable} node={child} level={level + 1} />
+      <ExplorerNode {createDraggable} {onFileClick} node={child} level={level + 1} />
     {/each}
   {/if}
 {:else}
   <div
     {@attach draggable.register}
     class="item file indent"
+    role="treeitem"
+    aria-selected="false"
+    tabindex="0"
     style="padding-left: {padding}px"
+    onclick={() => onFileClick(node)}
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.currentTarget.click();
+      }
+    }}
   >
     <span class="chevron-placeholder"></span>
     <FileIcon extension={getFileExtension(node.name)} />
