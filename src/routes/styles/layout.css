@@ -134,7 +134,7 @@
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'JetBrains Mono', 'Fira Code', monospace;
 
-  --scrollbar-size: 16px;
+  --scrollbar-size: 14px;
 
   /* track */
   --scrollbar-track-border: rgba(248, 248, 242, 0.06);
@@ -154,6 +154,7 @@ body {
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
+  overflow: overlay;
 }
 
 button {

@@ -87,6 +87,10 @@
   border-radius: 4px;
   overflow-x: auto;
   background: var(--color-surface) !important;
+  &::-webkit-scrollbar {
+    height: calc(var(--scrollbar-size) / 2);
+    width: calc(var(--scrollbar-size) / 2);
+  }
 }
 
 .content pre code {
