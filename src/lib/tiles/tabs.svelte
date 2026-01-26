@@ -181,12 +181,16 @@
   );
 
   class TabsDroppable extends Droppable<Tile> {
-    accepts(t: Tile | undefined): t is Tiles['tabs'] {
+    accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
+      const t = d.data;
       return (
         t?.type === 'tabs' &&
-        // NOTE: In most cases `t.children.length === 1` is expected
-        (tile.children.length !== 1 ||
-          t.children.every((c) => c.id !== tile.children[0].id))
+        !(
+          t.children.length === 1 &&
+          tile.children.length === 1 &&
+          t.children[0].id === tile.children[0].id &&
+          d instanceof DraggableTab
+        )
       );
     }
   }
@@ -224,10 +228,6 @@
       this.#id = id;
     }
 
-    accepts(t: Tile | undefined): t is Tiles['tabs'] {
-      return super.accepts(t) && t.children.every((c) => c.id !== this.#id);
-    }
-
     protected onDrop(tabs: Tiles['tabs']): void {
       const index = tile.children.findIndex((c) => c.id === this.#id);
       if (index < 0) {
@@ -240,9 +240,6 @@
 
   class DroppableContent extends DroppableRect {
     protected onDrop(tabs: Tiles['tabs']): void {
-      if (tabs.children.length < 1) {
-        return;
-      }
       const id = tabs.children[0].id;
       if (this.hpart === 'center' && this.vpart === 'center') {
         const i = tile.children.findIndex((t) => t.id === id);

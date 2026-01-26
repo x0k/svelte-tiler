@@ -4,7 +4,12 @@
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
-  import { Draggable } from '$lib/shared/dnd.svelte.js';
+  import {
+    DndContext,
+    Draggable,
+    type DraggableOptions,
+    type StopEvent,
+  } from '$lib/shared/dnd.svelte.js';
   import {
     setTilerContext,
     Panel,
@@ -126,6 +131,24 @@
     }
     return node.children.flatMap(treeNodeToTabs);
   }
+
+  class DraggableNode extends Draggable<Tile> {
+    #onDrop: () => void;
+    constructor(
+      ctx: DndContext<Tile>,
+      options: DraggableOptions<Tile> & {
+        onDrop: () => void;
+      }
+    ) {
+      super(ctx, options);
+      this.#onDrop = options.onDrop;
+    }
+    protected onStop(e: StopEvent): void {
+      if (e.reason === 'drop') {
+        this.#onDrop();
+      }
+    }
+  }
 </script>
 
 <div class="app">
@@ -163,13 +186,16 @@
       files={FILES}
       createDraggable={(node) => {
         let data: Tile | undefined;
-        return new Draggable(ctx.dnd, {
+        return new DraggableNode(ctx.dnd, {
           get data() {
             return (data ??= createTabs({
               tabHeader: 'tabHeader',
               actions: 'actions',
               tabs: treeNodeToTabs(node),
             }));
+          },
+          onDrop: () => {
+            data!.id = crypto.randomUUID();
           },
         });
       }}

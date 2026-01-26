@@ -36,7 +36,7 @@ export class DndContext<D = unknown> {
   findDroppable(
     x: number,
     y: number,
-    data: D | undefined
+    draggable: Draggable<D>
   ): Droppable<D, any> | undefined {
     for (const d of this.#droppables.values()) {
       if (d.element === undefined) {
@@ -46,7 +46,7 @@ export class DndContext<D = unknown> {
       if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
         continue;
       }
-      if (d.accepts(data)) {
+      if (d.accepts(draggable)) {
         return d;
       }
     }
@@ -79,6 +79,10 @@ export class Draggable<D = unknown> {
 
   get isDragged() {
     return this.ctx.sourceId === this.id;
+  }
+
+  get data() {
+    return this.options.data;
   }
 
   register(el: HTMLElement) {
@@ -171,11 +175,7 @@ export class Draggable<D = unknown> {
 
       feedback?.onMove(e);
 
-      const nextDroppable = this.ctx.findDroppable(
-        e.clientX,
-        e.clientY,
-        this.options.data
-      );
+      const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, this);
       if (activeDroppable !== nextDroppable) {
         activeDroppable?.[ON_LEAVE]();
         nextDroppable?.[ON_ENTER]();
@@ -269,7 +269,7 @@ export class Droppable<D = unknown, T extends D = D> {
     };
   }
 
-  accepts(data: D | undefined): data is T {
+  accepts(draggable: Draggable<D>): draggable is Draggable<T> {
     return true;
   }
 
