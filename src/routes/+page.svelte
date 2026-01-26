@@ -10,13 +10,14 @@
     Panel,
     TilerContext,
     type Tiles,
+    type Tile,
   } from '$lib/index.js';
   import * as Split from '$lib/tiles/split.svelte';
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
 
   import { highlight, markdownToHTML } from './lib/html.ts';
-  import { getFileExtension } from './lib/file-tree.ts';
+  import { getFileExtension, type TreeNode } from './lib/file-tree.ts';
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
 
@@ -38,9 +39,9 @@
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
   function createFileLeaf(path: string) {
-    const leaf = createLeaf(path)
-    leaf.id = path
-    return leaf
+    const leaf = createLeaf(path);
+    leaf.id = path;
+    return leaf;
   }
   const createTabs = Tabs.setup({
     headers: fromRecord({
@@ -118,6 +119,13 @@
       ],
     })
   );
+
+  function treeNodeToTabs(node: TreeNode): Array<[string, Tile]> {
+    if (node.type === 'file') {
+      return [[node.name, createFileLeaf(node.path)]];
+    }
+    return node.children.flatMap(treeNodeToTabs);
+  }
 </script>
 
 <div class="app">
@@ -153,19 +161,18 @@
   {#if tile.name === 'sidebar'}
     <Sidebar
       files={FILES}
-      createDraggable={(node) =>
-        new Draggable(ctx.dnd, {
-          data:
-            node.type === 'file'
-              ? createTabs({
-                  tabHeader: 'tabHeader',
-                  actions: 'actions',
-                  tabs: [[node.name, createFileLeaf(node.path)]],
-                })
-              : createTabs({
-                  tabs: [],
-                }),
-        })}
+      createDraggable={(node) => {
+        let data: Tile | undefined;
+        return new Draggable(ctx.dnd, {
+          get data() {
+            return (data ??= createTabs({
+              tabHeader: 'tabHeader',
+              actions: 'actions',
+              tabs: treeNodeToTabs(node),
+            }));
+          },
+        });
+      }}
     />
   {:else if getFileExtension(tile.name) === 'md'}
     <div class="content">
