@@ -23,18 +23,27 @@
     buildTree,
     getFileExtension,
     type TreeNode,
-  } from './lib/file-tree.ts';
+  } from './file-tree.ts';
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
 
-  const files = import.meta.glob('./lib/**/*', {
-    base: '../',
-    import: 'default',
-    query: '?shiki',
-  }) as Record<string, () => Promise<string>>;
-  files['./README.md'] = () =>
-    import('../../README.md?marked').then((m) => m.default);
+  const files = Object.assign(
+    {
+      './README.md': () =>
+        import('../../README.md?marked').then((m) => m.default),
+    },
+    import.meta.glob('./lib/**/*', {
+      base: '../',
+      import: 'default',
+      query: '?shiki',
+    }),
+    import.meta.glob('./docs/*', {
+      base: '../../',
+      import: 'default',
+      query: '?marked',
+    })
+  );
 
   let activeTabs: Tiles['tabs'];
   const ctx = new TilerContext({
@@ -105,36 +114,14 @@
           ],
         },
         {
-          tile: Split.create({
-            gapPx: 1,
-            children: [
-              {
-                tile: createTabs({
-                  tabHeader: 'tabHeader',
-                  tabs: [['README.md', createFileLeaf('./README.md')]],
-                }),
-                constraints: defaultConstraints,
-              },
-              {
-                tile: createTabs({
-                  tabHeader: 'tabHeader',
-                  tabs: [['model.ts', createFileLeaf('./lib/model.ts')]],
-                }),
-                constraints: defaultConstraints,
-              },
-            ],
+          tile: createTabs({
+            tabHeader: 'tabHeader',
+            tabs: [['README.md', createFileLeaf('./README.md')]],
           }),
         },
       ],
     })
   );
-
-  function treeNodeToTabs(node: TreeNode): Array<[string, Tile]> {
-    if (node.type === 'file') {
-      return [[node.name, createFileLeaf(node.path)]];
-    }
-    return node.children.flatMap(treeNodeToTabs);
-  }
 
   class DraggableTreeNode extends Draggable<Tile> {
     #lastData: Tile | undefined;
@@ -152,6 +139,13 @@
         this.#lastData = undefined;
       }
     }
+  }
+
+  function treeNodeToTabs(node: TreeNode): Array<[string, Tile]> {
+    if (node.type === 'file') {
+      return [[node.name, createFileLeaf(node.path)]];
+    }
+    return node.children.flatMap(treeNodeToTabs);
   }
 
   const tree = buildTree(files);
@@ -195,10 +189,16 @@
               (c) => c.id === node.path
             );
             if (index < 0) {
-              Tabs.insertTabs(activeTabs, activeTabs.children.length, {
-                titles: [node.name],
-                children: [createFileLeaf(node.path)],
-              });
+              const s = activeTabs.selectedTab;
+              if (activeTabs.children[s]) {
+                activeTabs.titles[s] = node.name;
+                activeTabs.children[s] = createFileLeaf(node.path);
+              } else {
+                Tabs.insertTabs(activeTabs, activeTabs.children.length, {
+                  titles: [node.name],
+                  children: [createFileLeaf(node.path)],
+                });
+              }
             } else {
               activeTabs.selectedTab = index;
             }

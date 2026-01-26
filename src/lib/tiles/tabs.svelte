@@ -326,7 +326,7 @@
             }}
             data-dragged={draggable.isDragged}
             data-over={droppable.isOver}
-            data-selected={tile.selectedTab === i}
+            aria-selected={tile.selectedTab === i}
             data-hpart={droppable.hpart}
             data-vpart={droppable.vpart}
           >

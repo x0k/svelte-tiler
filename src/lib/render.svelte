@@ -21,7 +21,7 @@
     }
   });
 
-  $effect(() => ctx.getTileEffects(tile)?.(tile as never));
+  $effect(() => ctx.getTileEffect(tile)?.(tile as never));
 
   const TileComponent = $derived(ctx.getTileComponent(tile));
 </script>

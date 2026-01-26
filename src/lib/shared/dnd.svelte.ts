@@ -86,6 +86,7 @@ export class Draggable<D = unknown> {
   }
 
   register(el: HTMLElement) {
+    this[Symbol.dispose]();
     this.#disposePointerDownHandler = on(el, 'pointerdown', (e) =>
       this.pointerDownHandler(e)
     );
@@ -262,6 +263,7 @@ export class Droppable<D = unknown, T extends D = D> {
   }
 
   register(el: HTMLElement) {
+    this[Symbol.dispose]();
     this.ctx.droppables.set(this.id, this);
     this.#element = el;
     return () => {

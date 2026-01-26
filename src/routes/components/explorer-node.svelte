@@ -47,7 +47,7 @@
     getFileExtension,
     type FileNode,
     type TreeNode,
-  } from '../lib/file-tree.js';
+  } from '../file-tree.ts';
   import ExplorerNode from './explorer-node.svelte';
   import FileIcon from './file-icon.svelte';
   import FolderIcon from './folder-icon.svelte';
@@ -65,7 +65,7 @@
   } = $props();
 
   // svelte-ignore state_referenced_locally
-  let open = $state(node.name === 'docs');
+  let open = $state(level === 1);
 
   const draggable = $derived(createDraggable(node));
 

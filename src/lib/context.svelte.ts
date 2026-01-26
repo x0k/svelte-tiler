@@ -46,7 +46,7 @@ export class TilerContext {
     return this.parents.get(tile);
   }
 
-  getTileEffects(tile: Tile) {
+  getTileEffect(tile: Tile) {
     return this.effects[tile.type];
   }
 
