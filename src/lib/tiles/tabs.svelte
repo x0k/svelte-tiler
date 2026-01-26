@@ -143,7 +143,7 @@
     tile.selectedTab = i;
   }
 
-  const EDGE_RATIO = 0.25;
+  const EDGE_RATIO = 0.2;
 </script>
 
 <script lang="ts">
@@ -222,18 +222,18 @@
 
   class DroppableTab extends DroppableRect {
     #id: string;
+    #index: number;
 
-    constructor(ctx: DndContext<Tile>, id: string) {
+    constructor(ctx: DndContext<Tile>, id: string, index: number) {
       super(ctx, 0.5);
       this.#id = id;
+      this.#index = index;
     }
 
     protected onDrop(tabs: Tiles['tabs']): void {
       const index = tile.children.findIndex((c) => c.id === this.#id);
-      if (index < 0) {
-        return;
-      }
-      const i = index + (this.hpart === 'start' ? 0 : 1);
+      const i =
+        index < 0 ? this.#index : index + (this.hpart === 'start' ? 0 : 1);
       insertTabs(tile, i, tabs);
     }
   }
@@ -302,7 +302,7 @@
     <div data-tabs-bar>
       <div data-tabs-list>
         {#each tile.children as t, i (t.id)}
-          {@const droppable = new DroppableTab(ctx.dnd, t.id)}
+          {@const droppable = new DroppableTab(ctx.dnd, t.id, i)}
           {@const draggable = new DraggableTab(ctx.dnd, {
             index: i,
             data: create({

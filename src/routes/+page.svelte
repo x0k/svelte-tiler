@@ -3,7 +3,11 @@
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
-  import { Draggable, type StopEvent } from '$lib/shared/dnd.svelte.js';
+  import {
+    ClonedGhost,
+    Draggable,
+    type StopEvent,
+  } from '$lib/shared/dnd.svelte.js';
   import {
     setTilerContext,
     Panel,
@@ -96,7 +100,7 @@
           tile: createLeaf('sidebar'),
           weight: 0.2,
           constraints: [
-            { type: 'minSize', unit: 'px', value: 150 },
+            { type: 'minSize', unit: 'px', value: 200 },
             { type: 'maxSize', unit: 'weight', value: 0.4 },
           ],
         },
@@ -137,6 +141,10 @@
 
     get data() {
       return (this.#lastData ??= this.options.data);
+    }
+
+    protected feedback(e: PointerEvent, el: HTMLElement) {
+      return new ClonedGhost(el, e).attach(document.body);
     }
 
     protected onStop(e: StopEvent): void {

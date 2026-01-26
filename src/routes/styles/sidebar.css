@@ -35,12 +35,6 @@
   cursor: pointer;
 }
 
-.icon-link :global(svg) {
-  display: block; /* remove inline spacing issues */
-  width: 1em; /* adjust icon size */
-  height: 1em;
-}
-
 /* Explorer */
 
 .explorer {
@@ -67,7 +61,7 @@
   background: var(--color-surface-hover);
 }
 
-.item :global(svg) {
+.item svg {
   flex-shrink: 0;
   color: currentColor;
 }
@@ -75,6 +69,7 @@
 /* Label text */
 
 .item .label {
+  font-size: 12pt;
   overflow: hidden;
   text-overflow: ellipsis;
 }

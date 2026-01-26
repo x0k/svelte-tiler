@@ -1,10 +1,53 @@
+<script lang="ts" module>
+  const FOCUSABLE_SELECTOR = `
+  a[href],
+  button:not([disabled]),
+  input:not([disabled]),
+  textarea:not([disabled]),
+  select:not([disabled]),
+  [tabindex]:not([tabindex="-1"])
+`;
+
+  function isFocusable(el: Element): el is HTMLElement {
+    return (
+      el instanceof HTMLElement && el.tabIndex >= 0 && el.offsetParent !== null
+    );
+  }
+
+  export function moveFocus(
+    direction: 1 | -1,
+    root: ParentNode = document
+  ): void {
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+    ).filter(isFocusable);
+
+    if (focusables.length === 0) return;
+
+    const active = document.activeElement;
+    const currentIndex =
+      active instanceof HTMLElement ? focusables.indexOf(active) : -1;
+
+    const nextIndex =
+      currentIndex === -1
+        ? 0
+        : (currentIndex + direction + focusables.length) % focusables.length;
+
+    focusables[nextIndex].focus();
+  }
+</script>
+
 <script lang="ts">
   import ChevronRight from '~icons/codicon/chevron-right';
   import ChevronDown from '~icons/codicon/chevron-down';
 
   import { Draggable } from '$lib/shared/dnd.svelte.js';
 
-  import { getFileExtension, type FileNode, type TreeNode } from '../lib/file-tree.js';
+  import {
+    getFileExtension,
+    type FileNode,
+    type TreeNode,
+  } from '../lib/file-tree.js';
   import ExplorerNode from './explorer-node.svelte';
   import FileIcon from './file-icon.svelte';
   import FolderIcon from './folder-icon.svelte';
@@ -22,11 +65,31 @@
   } = $props();
 
   // svelte-ignore state_referenced_locally
-    let open = $state(node.name === 'docs');
+  let open = $state(node.name === 'docs');
 
   const draggable = $derived(createDraggable(node));
 
-  const padding = $derived(level * 10)
+  const padding = $derived(level * 10);
+
+  function keyDownHandler(
+    e: KeyboardEvent & {
+      currentTarget: HTMLElement;
+    }
+  ) {
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        e.currentTarget.click();
+        break;
+      case 'ArrowDown':
+        moveFocus(1);
+        break;
+      case 'ArrowUp':
+        moveFocus(-1);
+        break;
+    }
+  }
 </script>
 
 {#if node.type === 'folder'}
@@ -39,12 +102,7 @@
     aria-expanded={open}
     aria-selected="false"
     tabindex="0"
-    onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        e.currentTarget.click();
-      }
-    }}
+    onkeydown={keyDownHandler}
   >
     <span class="chevron">
       {#if open}
@@ -61,24 +119,25 @@
 
   {#if open}
     {#each node.children as child}
-      <ExplorerNode {createDraggable} {onFileClick} node={child} level={level + 1} />
+      <ExplorerNode
+        {createDraggable}
+        {onFileClick}
+        node={child}
+        level={level + 1}
+      />
     {/each}
   {/if}
 {:else}
   <div
     {@attach draggable.register}
+    data-dragged={draggable.isDragged}
     class="item file indent"
     role="treeitem"
     aria-selected="false"
     tabindex="0"
     style="padding-left: {padding}px"
     onclick={() => onFileClick(node)}
-    onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        e.currentTarget.click();
-      }
-    }}
+    onkeydown={keyDownHandler}
   >
     <span class="chevron-placeholder"></span>
     <FileIcon extension={getFileExtension(node.name)} />
