@@ -2,12 +2,14 @@
   import MaterialIconThemeTypescript from '~icons/material-icon-theme/typescript';
   import MaterialIconThemeSvelte from '~icons/material-icon-theme/svelte';
   import MaterialIconThemeMarkdown from '~icons/material-icon-theme/markdown';
+  import MaterialIconThemeJson from '~icons/material-icon-theme/json';
   import CodiconFile from '~icons/codicon/file';
 
   const icons = {
     ts: MaterialIconThemeTypescript,
     svelte: MaterialIconThemeSvelte,
     md: MaterialIconThemeMarkdown,
+    json: MaterialIconThemeJson,
   };
 
   type IconType = keyof typeof icons;

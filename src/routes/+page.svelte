@@ -34,8 +34,13 @@
   import type { Component } from 'svelte';
 
   const files = Object.assign(
-    import.meta.glob(['./docs/*', './README.md'], {
+    import.meta.glob(['./docs/*', './*.md'], {
       base: '../../',
+      import: 'default',
+      query: '?marked',
+    }),
+    import.meta.glob('./examples/*.md', {
+      base: '../',
       import: 'default',
       query: '?marked',
     }),
@@ -44,11 +49,11 @@
       import: 'default',
       query: '?shiki',
     }),
-    import.meta.glob('./examples/*.md', {
-      base: '../',
+    import.meta.glob('./package.json', {
+      base: '../../',
       import: 'default',
-      query: '?marked',
-    })
+      query: '?shiki',
+    }),
   );
 
   const examples = import.meta.glob('./examples/*', {
@@ -82,7 +87,7 @@
   const createLeaf = Leaf.setup(fromConstant(leaf));
   function createFileLeaf(path: string) {
     const leaf =
-      path.startsWith('./examples/') && getFileExtension(path) !== 'md'
+      path.startsWith('./examples/') && getFileExtension(path) === 'svelte'
         ? Split.create({
             gapPx: 1,
             children: [

@@ -47,7 +47,7 @@
 
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 8px;
       height: 100%;
       font-size: larger;
     }
@@ -69,6 +69,7 @@
       height: min-content !important;
       padding: 0.5rem 2rem;
       border-radius: 10px;
+      background-color: var(--color-text-dim);
       &[aria-selected='true'] {
         background-color: var(--color-text-muted);
       }
