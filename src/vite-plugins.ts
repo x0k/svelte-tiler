@@ -5,13 +5,14 @@ import * as path from 'path';
 import ts from '@shikijs/langs/typescript';
 import svelte from '@shikijs/langs/svelte';
 import monokai from '@shikijs/themes/monokai';
+import shellscript from '@shikijs/langs/shellscript';
 import { createHighlighterCoreSync } from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import { marked } from 'marked';
 
 const shiki = createHighlighterCoreSync({
   themes: [monokai],
-  langs: [ts, svelte],
+  langs: [ts, svelte, shellscript],
   engine: createJavaScriptRegexEngine(),
 });
 

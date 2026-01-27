@@ -147,7 +147,7 @@
     tile.selectedTab = i;
   }
 
-  const EDGE_RATIO = 0.2;
+  const EDGE_RATIO = 0.1;
 </script>
 
 <script lang="ts">

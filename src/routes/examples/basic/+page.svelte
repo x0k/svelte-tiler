@@ -1,25 +1,9 @@
-# svelte-tiler
-
-A small, unstyled library for building tiling user interfaces.
-
-```sh
-npm i svelte-tiler
-```
-
-**Features**:
-
-- Serializable state
-- Type-safe model extension
-- No external dependencies
-
-## Usage
-
-```svelte
 <script lang="ts">
-  import { fromRecord } from 'svelte-tiler/shared/registry';
-  import { Tiler } from 'svelte-tiler';
-  import * as Leaf from 'svelte-tiler/tiles/leaf.svelte';
-  import * as Split from 'svelte-tiler/tiles/split.svelte';
+  import { fromRecord } from '$lib/shared/registry.js';
+  import { Tiler } from '$lib/index.js';
+  import * as Leaf from '$lib/tiles/leaf.svelte';
+  import * as Split from '$lib/tiles/split.svelte';
+  import * as Tabs from '$lib/tiles/tabs.svelte';
 
   const createLeaf = Leaf.setup(
     fromRecord({
@@ -45,8 +29,6 @@ npm i svelte-tiler
   );
 </script>
 
-<Tiler bind:layout tiles={{ leaf: Leaf, split: Split }} />
-
 {#snippet foo()}
   <p>Foo</p>
 {/snippet}
@@ -54,6 +36,8 @@ npm i svelte-tiler
 {#snippet bar()}
   <p>Bar</p>
 {/snippet}
+
+<Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} />
 
 <style>
   :global {
@@ -71,10 +55,3 @@ npm i svelte-tiler
     }
   }
 </style>
-```
-
-[Demo](https://x0k.github.io/svelte-tiler/examplse/basic)
-
-## License
-
-MIT

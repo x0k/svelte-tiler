@@ -21,7 +21,12 @@
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
 
-  import { buildTree, getFileExtension, type TreeNode } from './file-tree.ts';
+  import {
+    buildTree,
+    getFileExtension,
+    type FileNode,
+    type TreeNode,
+  } from './file-tree.ts';
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
@@ -56,6 +61,7 @@
   setTilerContext(ctx);
 
   const defaultConstraints: Constraint[] = [
+    { type: 'minSize', unit: 'px', value: 80 },
     { type: 'minSize', unit: 'weight', value: 0.2 },
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
@@ -147,11 +153,42 @@
     }
   }
 
-  function treeNodeToTabs(node: TreeNode): Array<[string, Tile]> {
+  function tabsFromTreeNode(node: TreeNode): Array<[string, Tile]> {
     if (node.type === 'file') {
       return [[node.name, createFileLeaf(node.path)]];
     }
-    return node.children.flatMap(treeNodeToTabs);
+    return node.children.flatMap(tabsFromTreeNode);
+  }
+
+  function createDraggable(node: TreeNode) {
+    return new DraggableTreeNode(ctx.dnd, {
+      get data() {
+        return createTabs({
+          tabHeader: 'tabHeader',
+          actions: 'actions',
+          empty: 'empty',
+          tabs: tabsFromTreeNode(node),
+        });
+      },
+    });
+  }
+
+  function onFileClick(node: FileNode) {
+    const index = activeTabs.children.findIndex((c) => c.id === node.path);
+    if (index < 0) {
+      const s = activeTabs.selectedTab;
+      if (activeTabs.children[s]) {
+        activeTabs.titles[s] = node.name;
+        activeTabs.children[s] = createFileLeaf(node.path);
+      } else {
+        Tabs.insertTabs(activeTabs, activeTabs.children.length, {
+          titles: [node.name],
+          children: [createFileLeaf(node.path)],
+        });
+      }
+    } else {
+      activeTabs.selectedTab = index;
+    }
   }
 
   const tree = buildTree(files);
@@ -194,39 +231,7 @@
   {#if tile.name === 'sidebar'}
     <Sidebar>
       {#each tree as node}
-        <ExplorerNode
-          {node}
-          createDraggable={(node) =>
-            new DraggableTreeNode(ctx.dnd, {
-              get data() {
-                return createTabs({
-                  tabHeader: 'tabHeader',
-                  actions: 'actions',
-                  empty: 'empty',
-                  tabs: treeNodeToTabs(node),
-                });
-              },
-            })}
-          onFileClick={(node) => {
-            const index = activeTabs.children.findIndex(
-              (c) => c.id === node.path
-            );
-            if (index < 0) {
-              const s = activeTabs.selectedTab;
-              if (activeTabs.children[s]) {
-                activeTabs.titles[s] = node.name;
-                activeTabs.children[s] = createFileLeaf(node.path);
-              } else {
-                Tabs.insertTabs(activeTabs, activeTabs.children.length, {
-                  titles: [node.name],
-                  children: [createFileLeaf(node.path)],
-                });
-              }
-            } else {
-              activeTabs.selectedTab = index;
-            }
-          }}
-        />
+        <ExplorerNode {node} {createDraggable} {onFileClick} />
       {/each}
     </Sidebar>
   {:else}

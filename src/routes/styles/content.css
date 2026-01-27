@@ -1,5 +1,5 @@
 .content {
-  padding: 0 32px;
+  padding: 0 4rem;
   min-height: 0;
   height: 100%;
   overflow-y: scroll;
@@ -8,7 +8,7 @@
   color: var(--color-text);
   background: var(--color-bg);
 
-  font-size: 16px;
+  font-size: 12pt;
   line-height: 1.6;
 }
 
@@ -49,11 +49,11 @@
 /* Text */
 
 .content p {
-  margin: 12px 0;
+  margin: 16px 0;
 }
 
 .content a {
-  color: var(--color-primary);
+  color: var(--color-info);
   text-decoration: none;
 }
 
@@ -113,7 +113,7 @@
 
 .content ul,
 .content ol {
-  margin: 12px 0 12px 24px;
+  margin: 18px 0;
 }
 
 .content li {
