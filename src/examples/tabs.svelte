@@ -11,7 +11,6 @@
   Tabs.setup({});
   let layout = $state(
     Tabs.create({
-      headersDirection: 'column',
       tabs: [
         ['Foo', createLeaf('Foo')],
         ['Bar', createLeaf('Bar')],
@@ -28,8 +27,9 @@
   });
 </script>
 
-<Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} {dnd} />
-<div bind:this={portalEl}></div>
+<div style="height: 200px;" bind:this={portalEl}>
+  <Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} {dnd} />
+</div>
 
 {#snippet leaf(tile: Tiles['leaf'])}
   {tile.name}
@@ -37,39 +37,56 @@
 
 <style>
   :global .example {
+    --color-text-muted: #ccccc7;
+    --color-text-dim: #90908a;
+    --color-success: #a6e22e;
     [data-tabs] {
-      display: flex;
-      flex-direction: row-reverse;
-      gap: 1rem;
-    }
-    [data-tabs-list] {
+      --gap: 0px;
+      --indicator-size: 0.4rem;
+      --indicator-offset: calc(-1 * (var(--gap) + var(--indicator-size)) / 2);
+
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
-      padding: 0.6rem 0;
+      gap: 1rem;
+      height: 100%;
+      font-size: larger;
+    }
+    [data-tabs-bar] {
+      display: flex;
+    }
+    [data-tabs-list] {
+      overflow-x: auto;
+      scrollbar-width: thin;
+      display: flex;
+      gap: var(--gap);
+      padding: 0.2rem;
+      background-color: var(--color-text-dim);
+      border-radius: 10px;
     }
     [data-tabs-header] {
       position: relative;
       width: min-content !important;
       height: min-content !important;
-      padding: 0.5rem 1rem;
-      background-color: lightgreen;
-      border-radius: 5px;
+      padding: 0.5rem 2rem;
+      border-radius: 10px;
       &[aria-selected='true'] {
-        background-color: yellow;
+        background-color: var(--color-text-muted);
       }
       &[data-over='true'] {
         &::before {
           content: '';
+          inset: 0;
+          top: 50%;
+          transform: translateY(-50%);
           position: absolute;
-          top: -0.4rem;
-          left: 0;
-          right: 0;
-          height: 0.2rem;
-          background-color: white;
+          height: 70%;
+          border-radius: 3px;
+          width: var(--indicator-size);
+          left: var(--indicator-offset);
+          background-color: var(--color-success);
         }
-        &[data-vpart='end']::before {
-          top: calc(100% + 0.2rem);
+        &[data-hpart='end']::before {
+          left: calc(100% + var(--indicator-offset));
         }
       }
     }
@@ -78,10 +95,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: lightblue;
-      border-radius: 5px;
-      &[data-over="true"] {
-        background-color: lightskyblue;
+      background-color: var(--color-text-dim);
+      border-radius: 15px;
+      &[data-over='true'] {
+        background-color: var(--color-success);
       }
     }
   }

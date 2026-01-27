@@ -7,6 +7,7 @@ import Icons from 'unplugin-icons/vite';
 import { markedImport, shikiImport } from './src/vite-plugins.js';
 
 export default defineConfig({
+  assetsInclude: ['**/*.md'],
   plugins: [
     sveltekit(),
     devtoolsJson(),

@@ -75,6 +75,7 @@ export function shikiImport(): Plugin {
 export function markedImport(): Plugin {
   return {
     name: 'vite-plugin-marked-import',
+    enforce: 'pre',
     async load(id) {
       if (!id.endsWith('?marked')) {
         return null;

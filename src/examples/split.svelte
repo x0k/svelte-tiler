@@ -48,7 +48,7 @@
     --color-success: #a6e22e;
     --color-text-dim: #90908a;
     [data-split] {
-      --resizer-len: calc(var(--gap) + 0.5rem);
+      --resizer-len: calc(var(--gap) + 0.8rem);
       --resizer-offset: calc(-50% - var(--gap) / 2);
 
       width: 100%;
@@ -58,6 +58,7 @@
       position: relative;
     }
     [data-split-resizer] {
+      position: absolute;
       z-index: 10;
       inset: 0;
       border-radius: 5px;
