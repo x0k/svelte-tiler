@@ -50,7 +50,7 @@ export function shikiImport(): Plugin {
       }
       const filePath = id.slice(0, -9);
       try {
-        const code = await readFile(filePath, 'utf-8');
+        let code = await readFile(filePath, 'utf-8');
         const ext = filePath.split('.').pop();
         const langMap: Record<string, string> = {
           ts: 'typescript',
@@ -59,6 +59,9 @@ export function shikiImport(): Plugin {
         const lang = ext && langMap[ext];
         if (!lang) {
           throw new Error(`invalid lang detected: "${ext}"`);
+        }
+        if (lang === 'svelte' && filePath.includes('/src/examples/')) {
+          code = fixImportsAndStyles(code);
         }
         const highlighted = shiki.codeToHtml(code, { lang, theme: 'monokai' });
         return `export default ${JSON.stringify(highlighted)};`;
@@ -86,4 +89,12 @@ export function markedImport(): Plugin {
       }
     },
   };
+}
+
+function fixImportsAndStyles(code: string): string {
+  return code
+    .replaceAll('$lib', 'svelte-tiler')
+    .replaceAll('/index.js', '')
+    .replaceAll('.js', '')
+    .replaceAll(':global .example', ':global');
 }

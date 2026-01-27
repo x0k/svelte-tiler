@@ -1,11 +1,5 @@
 <script lang="ts" module>
-  import {
-    flushSync,
-    getContext,
-    setContext,
-    tick,
-    type Snippet,
-  } from 'svelte';
+  import { getContext, setContext, tick, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -14,11 +8,10 @@
     type Constraint,
     type NormalizedConstraints,
   } from '$lib/shared/constraints.js';
-  import { almostEqual } from '$lib/shared/geometry.js';
+  import type { Direction } from '$lib/shared/spatial.js';
+  import { almostEqual } from '$lib/shared/math.js';
   import type { Tile, TileProps, Tiles } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.svelte.js';
-
-  export type Direction = 'row' | 'column';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -105,8 +98,11 @@
     }
     if (tile.children.length === 2) {
       const id = tile.children[i].id;
+      // TODO: Should `removeChild` return a `Promise`?
+      // Or is there a better way to coordinate such effects?
       tick().then(() => {
         if (tile.children.length === 2) {
+          // WARN: I think there are conditions under which `index` will be incorrect.
           parent.children[index] = tile.children[1 - i];
         } else {
           removeChild(

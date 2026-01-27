@@ -1,3 +1,5 @@
+export type Direction = 'row' | 'column';
+
 export type EdgePart = 'start' | 'center' | 'end';
 
 export function getEdgePart(
@@ -32,8 +34,4 @@ export function getRectParts(
     hpart: getEdgePart(rect.left, rect.right, x, ratio),
     vpart: getEdgePart(rect.top, rect.bottom, y, ratio),
   };
-}
-
-export function almostEqual(a: number, b: number, eps = 1e-6): boolean {
-  return Math.abs(a - b) < eps;
 }

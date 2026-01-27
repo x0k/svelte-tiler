@@ -9,19 +9,23 @@
     fromRecord({
       foo,
       bar,
+      baz
     })
   );
 
   let layout = $state(
     Split.create({
-      gapPx: 2,
+      gapPx: 16,
       children: [
         {
           tile: createLeaf('foo'),
-          constraints: [{ type: 'minSize', unit: 'px', value: 200 }],
+          constraints: [{ type: 'minSize', unit: 'px', value: 100 }],
         },
         {
           tile: createLeaf('bar'),
+        },
+        {
+          tile: createLeaf('baz'),
           constraints: [{ type: 'minSize', unit: '%', value: 20 }],
         },
       ],
@@ -29,28 +33,37 @@
   );
 </script>
 
+<Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} />
+
 {#snippet foo()}
-  <p>Foo</p>
+  Foo
 {/snippet}
 
 {#snippet bar()}
-  <p>Bar</p>
+  Bar
 {/snippet}
 
-<Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} />
+{#snippet baz()}
+  Baz
+{/snippet}
 
 <style>
-  :global {
-    [data-split] {
-      border: 2px black solid;
+  :global .example {
+    [data-split-item] {
+      display: flex;
+      justify-content: center;
+      padding: 0.5rem 0;
+      border-radius: 5px;
+      background-color: lightblue;
     }
     [data-split-resizer] {
       inset: 0;
-      background-color: black;
+      border-radius: 5px;
+      background-color: lightcyan;
     }
     [data-dir='row'] > [data-split-item] > [data-split-resizer] {
       cursor: col-resize;
-      width: var(--gap);
+      width: calc(var(--gap) - 8px);
       transform: translateX(calc(-50% - var(--gap) / 2));
     }
   }

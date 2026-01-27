@@ -1,4 +1,4 @@
-.app {
+@scope (.app) to (.example) {
   [data-split] {
     --resizer-line-size: var(--gap);
     --resizer-hit-size: 6px;

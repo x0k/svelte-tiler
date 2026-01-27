@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { createContext, type Snippet } from 'svelte';
+  import { createContext, getContext, setContext, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import type { Tile, Tiles } from '$lib/model.js';
@@ -10,6 +10,7 @@
       tabs: {
         titles: string[];
         selectedTab: number;
+        headersDirection: Direction;
         actions?: string;
         tabHeader?: string;
         empty?: string;
@@ -23,13 +24,15 @@
     A extends string,
   > {
     tabs: [string, Tile][];
+    /** @default "row" */
+    headersDirection?: Direction;
     selectedTab?: number;
     actions?: A;
     tabHeader?: H;
     empty?: E;
   }
 
-  function create<H extends string, E extends string, A extends string>(
+  export function create<H extends string, E extends string, A extends string>(
     options: TabsOptions<H, E, A>
   ): Tiles['tabs'] {
     const children: Tile[] = [];
@@ -43,6 +46,7 @@
       type: 'tabs',
       children,
       titles,
+      headersDirection: options.headersDirection ?? 'row',
       selectedTab: options.selectedTab ?? 0,
       actions: options.actions,
       tabHeader: options.tabHeader,
@@ -63,18 +67,18 @@
     E extends string = string,
     A extends string = string,
   > {
-    createSplit: (options: SplitOptions) => Tile;
+    createSplit?: (options: SplitOptions) => Tile;
     actions?: Registry<A, Snippet<[Tiles['tabs']]> | undefined>;
     headers?: Registry<H, Snippet<[Tiles['tabs'], number]> | undefined>;
     empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
   }
 
-  const [getTabsContext, setTabsContext] = createContext<TabsContext>();
+  const TABS_CONTEXT_KEY = Symbol('tabs-context-key');
 
   export function setup<H extends string, E extends string, A extends string>(
     ctx: TabsContext<H, E, A>
   ) {
-    setTabsContext(ctx);
+    setContext(TABS_CONTEXT_KEY, ctx);
     return create<H, E, A>;
   }
 
@@ -146,8 +150,6 @@
     tile.titles.splice(i, 0, ...titles);
     tile.selectedTab = i;
   }
-
-  const EDGE_RATIO = 0.1;
 </script>
 
 <script lang="ts">
@@ -159,7 +161,11 @@
     type DraggableOptions,
     type StopEvent,
   } from '$lib/shared/dnd.svelte.js';
-  import { getRectParts, type EdgePart } from '$lib/shared/geometry.js';
+  import {
+    getRectParts,
+    type Direction,
+    type EdgePart,
+  } from '$lib/shared/spatial.js';
   import { getTilerContext } from '$lib/context.svelte.js';
   import type { TileProps } from '$lib/model.js';
 
@@ -170,7 +176,7 @@
   }: TileProps<'tabs'> = $props();
 
   const ctx = getTilerContext();
-  const tabsCtx = getTabsContext();
+  const tabsCtx = getContext<TabsContext | undefined>(TABS_CONTEXT_KEY);
 
   const actions = $derived(
     (tile.actions !== undefined && tabsCtx?.actions?.get(tile.actions)) ||
@@ -183,6 +189,7 @@
   const empty = $derived(
     (tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
   );
+  const edgeRatio = $derived(tabsCtx?.createSplit ? 0.1 : 0);
 
   class TabsDroppable extends Droppable<Tile> {
     accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
@@ -236,19 +243,22 @@
 
     protected onDrop(tabs: Tiles['tabs']): void {
       const index = tile.children.findIndex((c) => c.id === this.#id);
-      const i =
-        index < 0 ? this.#index : index + (this.hpart === 'start' ? 0 : 1);
+      const part = tile.headersDirection === 'row' ? this.hpart : this.vpart;
+      const i = index < 0 ? this.#index : index + (part === 'start' ? 0 : 1);
       insertTabs(tile, i, tabs);
     }
   }
 
   class DroppableContent extends DroppableRect {
-    protected onDrop(tabs: Tiles['tabs']): void {
+    protected onDrop(tabs: Tiles['tabs'], d: Draggable): void {
       const id = tabs.children[0].id;
       if (this.hpart === 'center' && this.vpart === 'center') {
-        const i = tile.children.findIndex((t) => t.id === id);
+        let i = tile.children.findIndex((t) => t.id === id);
+        if (i < 0 && d instanceof DraggableTab) {
+          i = d.index;
+        }
         insertTabs(tile, i < 0 ? tile.children.length : i, tabs);
-      } else {
+      } else if (tabsCtx?.createSplit) {
         parent = tabsCtx.createSplit({
           parent,
           type:
@@ -273,11 +283,11 @@
   }
 
   class DraggableTab extends Draggable<Tile> {
-    #index: number;
+    readonly index: number;
 
     constructor(ctx: DndContext<Tile>, options: DraggableTabOptions) {
       super(ctx, options);
-      this.#index = options.index;
+      this.index = options.index;
     }
 
     protected feedback(e: PointerEvent, el: HTMLElement) {
@@ -288,7 +298,7 @@
       if (reason !== 'drop') {
         return;
       }
-      ctx.removeChild(tile, this.#index);
+      ctx.removeChild(tile, this.index);
     }
   }
 
@@ -300,8 +310,8 @@
   }
 
   const droppableSpacer = $derived(new DroppableSurface(ctx.dnd));
-  const droppableContent = $derived(new DroppableContent(ctx.dnd, EDGE_RATIO));
-  const droppableEmpty = $derived(new DroppableContent(ctx.dnd, EDGE_RATIO));
+  const droppableContent = $derived(new DroppableContent(ctx.dnd, edgeRatio));
+  const droppableEmpty = $derived(new DroppableContent(ctx.dnd, edgeRatio));
 </script>
 
 {#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}

@@ -14,14 +14,10 @@ export interface DndContextOptions {
 }
 
 export class DndContext<D = unknown> {
-  #portalTarget: ShadowRoot | Element | undefined;
+  portalTarget: ShadowRoot | Element;
 
-  get portalTarget(): ShadowRoot | Element {
-    return this.#portalTarget ?? document.body;
-  }
-
-  constructor({ portalTarget }: DndContextOptions = {}) {
-    this.#portalTarget = portalTarget;
+  constructor(options: DndContextOptions = {}) {
+    this.portalTarget = $derived(options.portalTarget ?? document.body);
   }
 
   #droppables = new SvelteMap<string, Droppable<D, any>>();
@@ -128,6 +124,8 @@ export class Draggable<D = unknown> {
 
   protected onStop(_e: StopEvent) {}
 
+  // NOTE: I believe this logic should be in `DndContext`, but it is difficult to
+  // separate and there is no specific reason to do so right now.
   protected pointerDownHandler(
     event: PointerEvent & {
       currentTarget: HTMLElement;
@@ -204,7 +202,7 @@ export class Draggable<D = unknown> {
 
       if (ev.reason === 'drop') {
         flushSync(() => {
-          activeDroppable?.[ON_DROP](snap);
+          activeDroppable?.[ON_DROP](snap, this);
         });
       }
 
@@ -287,8 +285,8 @@ export class Droppable<D = unknown, T extends D = D> {
     this.onLeave();
   }
 
-  [ON_DROP](data: T) {
-    this.onDrop(data);
+  [ON_DROP](data: T, draggable: Draggable<T>) {
+    this.onDrop(data, draggable);
   }
 
   protected onEnter() {}
@@ -297,7 +295,7 @@ export class Droppable<D = unknown, T extends D = D> {
 
   protected onLeave() {}
 
-  protected onDrop(_data: T) {}
+  protected onDrop(_data: T, _draggable: Draggable<T>) {}
 }
 
 export class ClonedGhost {

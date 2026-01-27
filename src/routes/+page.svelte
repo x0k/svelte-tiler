@@ -30,23 +30,30 @@
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
+  import type { Component } from 'svelte';
 
   const files = Object.assign(
-    {
-      './README.md': () =>
-        import('../../README.md?marked').then((m) => m.default),
-    },
-    import.meta.glob('./lib/**/*', {
+    import.meta.glob(['./docs/*', './README.md'], {
+      base: '../../',
+      import: 'default',
+      query: '?marked',
+    }),
+    import.meta.glob(['./lib/**/*', './examples/*.svelte'], {
       base: '../',
       import: 'default',
       query: '?shiki',
     }),
-    import.meta.glob('./docs/*', {
-      base: '../../',
+    import.meta.glob('./examples/*.md', {
+      base: '../',
       import: 'default',
       query: '?marked',
     })
   );
+
+  const examples = import.meta.glob('./examples/*', {
+    base: '../',
+    import: 'default',
+  }) as Record<string, () => Promise<Component>>;
 
   let activeTabs: Tiles['tabs'];
   const ctx = new TilerContext({
@@ -66,7 +73,20 @@
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
   function createFileLeaf(path: string) {
-    const leaf = createLeaf(path);
+    const leaf =
+      path.startsWith('./examples/') && getFileExtension(path) !== 'md'
+        ? Split.create({
+            gapPx: 1,
+            children: [
+              {
+                tile: createLeaf(path),
+              },
+              {
+                tile: createLeaf(`example:${path}`),
+              },
+            ],
+          })
+        : createLeaf(path);
     leaf.id = path;
     return leaf;
   }
@@ -234,11 +254,17 @@
         <ExplorerNode {node} {createDraggable} {onFileClick} />
       {/each}
     </Sidebar>
+  {:else if tile.name.startsWith('example:')}
+    <div class="example">
+      {#await examples[tile.name.slice(8)]() then Example}
+        <Example />
+      {/await}
+    </div>
   {:else}
     <div
       class={getFileExtension(tile.name) === 'md' ? 'content' : 'code-preview'}
     >
-      {#await files[tile.id]() then content}
+      {#await files[tile.name]() then content}
         {@html content}
       {/await}
     </div>
@@ -249,5 +275,9 @@
   .app {
     width: 100%;
     height: 100vh;
+  }
+
+  .example {
+    padding: 2rem;
   }
 </style>

@@ -16,11 +16,18 @@
   import MaterialIconThemeFolderUi from '~icons/material-icon-theme/folder-ui';
   import MaterialIconThemeFolderUiOpen from '~icons/material-icon-theme/folder-ui-open';
 
+  import MaterialIconThemeFolderExamples from '~icons/material-icon-theme/folder-examples';
+  import MaterialIconThemeFolderExamplesOpen from '~icons/material-icon-theme/folder-examples-open';
+
   const icons: Record<string, [Component, Component]> = {
     lib: [MaterialIconThemeFolderLib, MaterialIconThemeFolderLibOpen],
     docs: [MaterialIconThemeFolderDocs, MaterialIconThemeFolderDocsOpen],
     shared: [MaterialIconThemeFolderShared, MaterialIconThemeFolderSharedOpen],
-    tiles: [MaterialIconThemeFolderUi, MaterialIconThemeFolderUiOpen]
+    tiles: [MaterialIconThemeFolderUi, MaterialIconThemeFolderUiOpen],
+    examples: [
+      MaterialIconThemeFolderExamples,
+      MaterialIconThemeFolderExamplesOpen,
+    ],
   };
   const defaultIcons = [Folder, FolderOpen];
 </script>
