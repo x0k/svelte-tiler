@@ -279,5 +279,6 @@
 
   .example {
     padding: 2rem;
+    overflow: hidden;
   }
 </style>
