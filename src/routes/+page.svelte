@@ -1,5 +1,7 @@
 <script lang="ts">
   import CodiconClose from '~icons/codicon/close';
+  import CodiconCloseAll from '~icons/codicon/close-all';
+  import MaterialIconThemeSvelte from '~icons/material-icon-theme/svelte';
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
@@ -19,11 +21,7 @@
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
 
-  import {
-    buildTree,
-    getFileExtension,
-    type TreeNode,
-  } from './file-tree.ts';
+  import { buildTree, getFileExtension, type TreeNode } from './file-tree.ts';
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
@@ -69,6 +67,12 @@
   const createTabs = Tabs.setup({
     headers: fromRecord({
       tabHeader,
+    }),
+    actions: fromRecord({
+      actions,
+    }),
+    empty: fromRecord({
+      empty,
     }),
     createSplit({ parent, type, pivot, adjacent, offset }) {
       if (
@@ -116,6 +120,8 @@
         {
           tile: createTabs({
             tabHeader: 'tabHeader',
+            actions: 'actions',
+            empty: 'empty',
             tabs: [['README.md', createFileLeaf('./README.md')]],
           }),
         },
@@ -169,6 +175,21 @@
   </button>
 {/snippet}
 
+{#snippet actions(tile: Tiles['tabs'])}
+  <button
+    class="button"
+    onclick={() => {
+      Tabs.closeAll(tile);
+    }}
+  >
+    <CodiconCloseAll />
+  </button>
+{/snippet}
+
+{#snippet empty()}
+  <MaterialIconThemeSvelte />
+{/snippet}
+
 {#snippet leaf(tile: Tiles['leaf'])}
   {#if tile.name === 'sidebar'}
     <Sidebar>
@@ -180,6 +201,8 @@
               get data() {
                 return createTabs({
                   tabHeader: 'tabHeader',
+                  actions: 'actions',
+                  empty: 'empty',
                   tabs: treeNodeToTabs(node),
                 });
               },

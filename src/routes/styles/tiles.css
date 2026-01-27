@@ -178,6 +178,19 @@
   }
 }
 
+[data-tabs-empty] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  > svg {
+    width: 50%;
+    height: auto;
+    > path {
+      fill: var(--color-surface);
+    }
+  }
+}
+
 /* Firefox fallback */
 /* * {
 	scrollbar-width: thin;

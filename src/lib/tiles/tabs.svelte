@@ -143,6 +143,12 @@
     tile.selectedTab = i;
   }
 
+  export function closeAll(tile: Tiles['tabs']) {
+    tile.children.length = 0;
+    tile.titles.length = 0;
+    tile.selectedTab = -1;
+  }
+
   const EDGE_RATIO = 0.2;
 </script>
 
@@ -288,6 +294,13 @@
     }
   }
 
+  function handleKeydown(e: KeyboardEvent & { currentTarget: HTMLElement }) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.currentTarget.click();
+    }
+  }
+
   const droppableSpacer = $derived(new DroppableSurface(ctx.dnd));
   const droppableContent = $derived(new DroppableContent(ctx.dnd, EDGE_RATIO));
   const droppableEmpty = $derived(new DroppableContent(ctx.dnd, EDGE_RATIO));
@@ -318,12 +331,7 @@
             role="tab"
             tabindex="0"
             onclick={() => (tile.selectedTab = i)}
-            onkeydown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.currentTarget.click();
-              }
-            }}
+            onkeydown={handleKeydown}
             data-dragged={draggable.isDragged}
             data-over={droppable.isOver}
             aria-selected={tile.selectedTab === i}
