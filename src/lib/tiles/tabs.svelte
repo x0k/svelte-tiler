@@ -83,14 +83,18 @@
     tile: Tiles['tabs'],
     i: number
   ) {
+    if (tile.children.length < 2) {
+      return destroy(ctx, tile);
+    }
     if (tile.selectedTab >= i) {
       tile.selectedTab = Math.max(0, tile.selectedTab - 1);
     }
-    if (tile.children.length > 1) {
-      tile.children.splice(i, 1);
-      tile.titles.splice(i, 1);
-      return true;
-    }
+    tile.children.splice(i, 1);
+    tile.titles.splice(i, 1);
+    return true;
+  }
+
+  export function destroy(ctx: TilerContext, tile: Tiles['tabs']) {
     const parent = ctx.getTileParent(tile);
     if (parent === undefined) {
       return false;
@@ -141,12 +145,6 @@
     tile.children.splice(i, 0, ...children);
     tile.titles.splice(i, 0, ...titles);
     tile.selectedTab = i;
-  }
-
-  export function closeAll(tile: Tiles['tabs']) {
-    tile.children.length = 0;
-    tile.titles.length = 0;
-    tile.selectedTab = -1;
   }
 
   const EDGE_RATIO = 0.2;

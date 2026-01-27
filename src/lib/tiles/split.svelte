@@ -145,152 +145,151 @@
   );
 
   let splitEl: HTMLDivElement;
+  let resizerEl: HTMLElement;
+
+  const isRow = $derived(tile.direction === 'row');
+  let currentDir = 0;
+  let lastDir = 0;
+  let startPos = 0;
+  let previousPos = 0;
+  let containerSize = 0;
+  let remaining = 0;
+  let totalWeight = 0;
+  let len = 0;
+  let constraints: NormalizedConstraints[] = [];
+
+  let lastWeights: number[] = [];
+  let nextLayout: number[] = [];
 
   class DraggableResizer extends Draggable {
-    resizerEl: HTMLElement = splitEl;
-    isRow = $derived(tile.direction === 'row');
-
-    index = 0;
-    currentDir = 0;
-    lastDir = 0;
-    startPos = 0;
-    previousPos = 0;
-    containerSize = 0;
-    remaining = 0;
-    totalWeight = 0;
-    len = 0;
-    constraints: NormalizedConstraints[] = [];
-
-    lastWeights: number[] = [];
-    nextLayout: number[] = [];
+    #index = 0;
 
     constructor(ctx: DndContext, index: number) {
       super(ctx);
-      this.index = index;
+      this.#index = index;
     }
 
     protected onStart(e: PointerEvent, el: HTMLElement): void {
-      this.resizerEl = el;
-
-      this.currentDir = 0;
-      this.lastDir = 0;
-      this.startPos = this.isRow ? e.pageX : e.pageY;
-      this.previousPos = this.startPos;
+      resizerEl = el;
+      currentDir = 0;
+      lastDir = 0;
+      startPos = isRow ? e.pageX : e.pageY;
+      previousPos = startPos;
       this.syncWeights();
-      this.remaining = 0;
-      this.totalWeight = tile.weights.reduce((a, b) => a + b);
-      this.len = tile.weights.length;
+      remaining = 0;
+      totalWeight = tile.weights.reduce((a, b) => a + b);
+      len = tile.weights.length;
 
-      this.containerSize =
-        (this.isRow ? splitEl.clientWidth : splitEl.clientHeight) -
-        (this.len - 1) * tile.gapPx;
-      this.constraints = tile.constraints.map((constraints) =>
+      containerSize =
+        (isRow ? splitEl.clientWidth : splitEl.clientHeight) -
+        (len - 1) * tile.gapPx;
+      constraints = tile.constraints.map((constraints) =>
         normalize({
           constraints,
           targetUnit: 'weight',
           totalSizePercent: 100,
-          totalSizePx: this.containerSize,
-          totalWeight: this.totalWeight,
+          totalSizePx: containerSize,
+          totalWeight: totalWeight,
         })
       );
     }
 
     protected onMove(e: PointerEvent) {
-      const currentPos = this.isRow ? e.pageX : e.pageY;
-      this.currentDir = Math.sign(currentPos - this.previousPos);
-      if (this.currentDir === 0) {
+      const currentPos = isRow ? e.pageX : e.pageY;
+      currentDir = Math.sign(currentPos - previousPos);
+      if (currentDir === 0) {
         return;
       }
-      const resizerRect = this.resizerEl.getBoundingClientRect();
+      const resizerRect = resizerEl.getBoundingClientRect();
       if (
-        this.isRow
-          ? this.currentDir < 0
+        isRow
+          ? currentDir < 0
             ? currentPos < resizerRect.right
             : currentPos > resizerRect.left
-          : this.currentDir < 0
+          : currentDir < 0
             ? currentPos < resizerRect.bottom
             : currentPos > resizerRect.top
       ) {
-        if (this.currentDir !== this.lastDir) {
-          this.startPos = this.previousPos;
+        if (currentDir !== lastDir) {
+          startPos = previousPos;
           this.syncWeights();
-          this.lastDir = this.currentDir;
+          lastDir = currentDir;
         }
         const deltaWeight = Math.abs(
-          ((currentPos - this.startPos) * this.totalWeight) / this.containerSize
+          ((currentPos - startPos) * totalWeight) / containerSize
         );
         if (deltaWeight > 0) {
-          this.remaining = deltaWeight;
+          remaining = deltaWeight;
           this.adjustBy('shrink');
-          this.remaining = deltaWeight - this.remaining;
-          if (this.remaining > 0) {
-            this.currentDir *= -1;
+          remaining = deltaWeight - remaining;
+          if (remaining > 0) {
+            currentDir *= -1;
             this.adjustBy('expand');
           }
-          const total = this.nextLayout.reduce((a, b) => a + b);
-          if (almostEqual(this.totalWeight, total)) {
-            for (let j = 0; j < this.len; j++) {
-              tile.weights[j] = this.nextLayout[j];
+          const total = nextLayout.reduce((a, b) => a + b);
+          if (almostEqual(totalWeight, total)) {
+            for (let j = 0; j < len; j++) {
+              tile.weights[j] = nextLayout[j];
             }
           }
         }
       }
-      this.previousPos = currentPos;
+      previousPos = currentPos;
     }
 
     protected onStop() {
-      for (let j = 0; j < this.len; j++) {
+      for (let j = 0; j < len; j++) {
         tile.weights[j] = Number.parseFloat(tile.weights[j].toFixed(3));
       }
     }
 
     private expand(j: number) {
-      const weight = this.lastWeights[j];
-      const maxWeight = this.constraints[j].maxSize;
+      const weight = lastWeights[j];
+      const maxWeight = constraints[j].maxSize;
       if (weight < maxWeight) {
         const available = maxWeight - weight;
-        if (available < this.remaining) {
-          this.nextLayout[j] = maxWeight;
-          this.remaining -= available;
+        if (available < remaining) {
+          nextLayout[j] = maxWeight;
+          remaining -= available;
         } else {
-          this.nextLayout[j] = weight + this.remaining;
-          this.remaining = 0;
+          nextLayout[j] = weight + remaining;
+          remaining = 0;
         }
       }
     }
 
     private shrink(j: number) {
-      const minWeight = this.constraints[j].minSize;
-      const weight = this.lastWeights[j];
+      const minWeight = constraints[j].minSize;
+      const weight = lastWeights[j];
       if (weight > minWeight) {
         const available = weight - minWeight;
-        if (available < this.remaining) {
-          this.nextLayout[j] = minWeight;
-          this.remaining -= available;
+        if (available < remaining) {
+          nextLayout[j] = minWeight;
+          remaining -= available;
         } else {
-          this.nextLayout[j] = weight - this.remaining;
-          this.remaining = 0;
+          nextLayout[j] = weight - remaining;
+          remaining = 0;
         }
       }
     }
 
     private adjustBy(adjust: 'expand' | 'shrink') {
-      if (this.currentDir < 0) {
-        let j = this.index - 1;
-        while (j >= 0 && this.remaining > 0) {
+      if (currentDir < 0) {
+        let j = this.#index - 1;
+        while (j >= 0 && remaining > 0) {
           this[adjust](j--);
         }
       } else {
-        let j = this.index;
-        while (j < this.len && this.remaining > 0) {
+        let j = this.#index;
+        while (j < len && remaining > 0) {
           this[adjust](j++);
         }
       }
     }
 
     private syncWeights() {
-      this.lastWeights = $state.snapshot(tile.weights);
-      this.nextLayout = this.lastWeights.slice();
+      lastWeights = $state.snapshot(tile.weights);
+      nextLayout = lastWeights.slice();
     }
   }
 </script>

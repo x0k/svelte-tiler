@@ -179,7 +179,7 @@
   <button
     class="button"
     onclick={() => {
-      Tabs.closeAll(tile);
+      Tabs.destroy(ctx, tile);
     }}
   >
     <CodiconCloseAll />
