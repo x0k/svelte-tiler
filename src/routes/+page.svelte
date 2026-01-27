@@ -7,6 +7,7 @@
   import type { Constraint } from '$lib/shared/constraints.js';
   import {
     ClonedGhost,
+    DndContext,
     Draggable,
     type StopEvent,
   } from '$lib/shared/dnd.svelte.js';
@@ -56,7 +57,14 @@
   }) as Record<string, () => Promise<Component>>;
 
   let activeTabs: Tiles['tabs'];
+  let portalEl: HTMLDivElement;
+  const dnd = new DndContext({
+    get portalTarget() {
+      return portalEl;
+    },
+  });
   const ctx = new TilerContext({
+    dnd,
     tiles: { split: Split, leaf: Leaf, tabs: Tabs },
     effects: {
       tabs: (tile) => {
@@ -214,7 +222,7 @@
   const tree = buildTree(files);
 </script>
 
-<div class="app">
+<div bind:this={portalEl} class="app">
   <Panel bind:layout />
 </div>
 
