@@ -71,7 +71,7 @@
   > {
     createSplit?: (options: SplitOptions) => Tile;
     actions?: Registry<A, Snippet<[Tiles['tabs']]> | undefined>;
-    headers?: Registry<H, Snippet<[Tiles['tabs'], number]> | undefined>;
+    headers?: Registry<H, Snippet<[Tiles['tabs'], number, Draggable<Tile>]> | undefined>;
     empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
   }
 
@@ -91,7 +91,7 @@
   ) {
     if (tile.children.length < 2) {
       ctx.destroy(tile);
-      return
+      return;
     }
     if (tile.selectedTab >= i) {
       tile.selectedTab = Math.max(0, tile.selectedTab - 1);
@@ -145,7 +145,6 @@
 
 <script lang="ts">
   import {
-    ClonedGhost,
     DndContext,
     Draggable,
     type DraggableOptions,
@@ -289,10 +288,6 @@
       this.index = options.index;
     }
 
-    protected feedback(e: PointerEvent, el: HTMLElement) {
-      return new ClonedGhost(el, e).attach(ctx.dnd.portalTarget);
-    }
-
     protected onStop({ reason }: StopEvent): void {
       if (reason !== 'drop') {
         return;
@@ -345,7 +340,7 @@
             data-hpart={droppable.hpart}
             data-vpart={droppable.vpart}
           >
-            {@render tabHeader(tile, i)}
+            {@render tabHeader(tile, i, draggable)}
           </div>
         {/each}
       </div>

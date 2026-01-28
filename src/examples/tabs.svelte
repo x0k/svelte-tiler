@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fromConstant } from '$lib/shared/registry.js';
-  import { DndContext } from '$lib/shared/dnd.svelte.js';
+  import { ClonedGhost, DndContext } from '$lib/shared/dnd.svelte.js';
   import { Tiler, type Tiles } from '$lib/index.js';
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Split from '$lib/tiles/split.svelte';
@@ -21,9 +21,7 @@
 
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
-    get portalTarget() {
-      return portalEl;
-    },
+    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl)
   });
 </script>
 

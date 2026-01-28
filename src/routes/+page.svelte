@@ -64,9 +64,7 @@
   let activeTabs: Tiles['tabs'];
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
-    get portalTarget() {
-      return portalEl;
-    },
+    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
   });
 
   class CustomTilerContext extends TilerContext {
@@ -186,10 +184,6 @@
 
     get data() {
       return (this.#lastData ??= this.options.data);
-    }
-
-    protected feedback(e: PointerEvent, el: HTMLElement) {
-      return new ClonedGhost(el, e).attach(document.body);
     }
 
     protected onStop(e: StopEvent): void {

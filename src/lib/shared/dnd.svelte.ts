@@ -9,15 +9,22 @@ const ON_MOVE = Symbol('on-move-key');
 const ON_LEAVE = Symbol('on-leave-key');
 const ON_DROP = Symbol('on-drop-key');
 
+export type FeedbackFactory = (
+  e: PointerEvent,
+  el: HTMLElement
+) =>
+  | { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void }
+  | undefined;
+
 export interface DndContextOptions {
-  portalTarget?: ShadowRoot | Element;
+  feedback?: FeedbackFactory;
 }
 
 export class DndContext<D = unknown> {
-  portalTarget: ShadowRoot | Element;
+  readonly feedback: FeedbackFactory;
 
   constructor(options: DndContextOptions = {}) {
-    this.portalTarget = $derived(options.portalTarget ?? document.body);
+    this.feedback = options.feedback ?? (() => undefined);
   }
 
   #droppables = new SvelteMap<string, Droppable<D, any>>();
@@ -63,6 +70,8 @@ export class Draggable<D = unknown> {
   #disposePointerDownHandler: (() => void) | undefined;
   #disposeClickHandler: (() => void) | undefined;
   #didDrag = false;
+  #baseElement: HTMLElement | undefined;
+  #hasHandel = false;
 
   readonly id = crypto.randomUUID();
 
@@ -71,6 +80,7 @@ export class Draggable<D = unknown> {
     protected readonly options: DraggableOptions<D> = {}
   ) {
     this.register = this.register.bind(this);
+    this.registerHandel = this.registerHandel.bind(this);
   }
 
   get isDragged() {
@@ -82,7 +92,41 @@ export class Draggable<D = unknown> {
   }
 
   register(el: HTMLElement) {
+    if (!this.#hasHandel) {
+      this[Symbol.dispose]();
+      this.addEventHandlers(el);
+    }
+    this.#baseElement = el;
+    return () => {
+      this.#baseElement = undefined;
+      if (!this.#hasHandel) {
+        this[Symbol.dispose]();
+      }
+    };
+  }
+
+  registerHandel(el: HTMLElement) {
     this[Symbol.dispose]();
+    this.addEventHandlers(el);
+    this.#hasHandel = true;
+    return () => {
+      this.#hasHandel = false;
+      this[Symbol.dispose]();
+    };
+  }
+
+  [Symbol.dispose]() {
+    this.#disposeClickHandler?.();
+    this.#disposePointerDownHandler?.();
+  }
+
+  protected onStart(_e: PointerEvent, _el: HTMLElement) {}
+
+  protected onMove(_e: PointerEvent) {}
+
+  protected onStop(_e: StopEvent) {}
+
+  protected addEventHandlers(el: HTMLElement) {
     this.#disposePointerDownHandler = on(el, 'pointerdown', (e) =>
       this.pointerDownHandler(e)
     );
@@ -99,30 +143,7 @@ export class Draggable<D = unknown> {
       },
       { capture: true }
     );
-    return () => {
-      this[Symbol.dispose]();
-    };
   }
-
-  [Symbol.dispose]() {
-    this.#disposeClickHandler?.();
-    this.#disposePointerDownHandler?.();
-  }
-
-  protected feedback(
-    _e: PointerEvent,
-    _el: HTMLElement
-  ):
-    | { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void }
-    | undefined {
-    return undefined;
-  }
-
-  protected onStart(_e: PointerEvent, _el: HTMLElement) {}
-
-  protected onMove(_e: PointerEvent) {}
-
-  protected onStop(_e: StopEvent) {}
 
   // NOTE: I believe this logic should be in `DndContext`, but it is difficult to
   // separate and there is no specific reason to do so right now.
@@ -166,7 +187,7 @@ export class Draggable<D = unknown> {
         }
         this.#didDrag = true;
         this.ctx.sourceId = this.id;
-        feedback = this.feedback(e, el);
+        feedback = this.ctx.feedback(e, this.#baseElement ?? el);
         this.onStart(e, el);
       }
 

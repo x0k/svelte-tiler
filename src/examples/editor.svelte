@@ -3,14 +3,20 @@
 
   import CodiconTrash from '~icons/codicon/trash';
   import CodiconNewFile from '~icons/codicon/new-file';
+  import CodiconGripper from '~icons/codicon/gripper';
 
   import type { Constraint } from '$lib/shared/constraints.js';
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
-  import { DndContext } from '$lib/shared/dnd.svelte.js';
+  import {
+    ClonedGhost,
+    DndContext,
+    Draggable,
+  } from '$lib/shared/dnd.svelte.js';
   import {
     Panel,
     setTilerContext,
     TilerContext,
+    type Tile,
     type Tiles,
   } from '$lib/index.js';
   import * as Leaf from '$lib/tiles/leaf.svelte';
@@ -89,9 +95,7 @@
 
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
-    get portalTarget() {
-      return portalEl;
-    },
+    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
   });
   const ctx = new TilerContext({
     dnd,
@@ -104,7 +108,8 @@
   <Panel bind:layout />
 </div>
 
-{#snippet editorHeader(tile: Tiles['tabs'], i: number)}
+{#snippet editorHeader(tile: Tiles['tabs'], i: number, d: Draggable<Tile>)}
+  <CodiconGripper {@attach d.registerHandel} />
   <span
     bind:textContent={
       () => tile.titles[i],
@@ -222,12 +227,16 @@
       flex-shrink: 0;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      width: min-content !important;
+      height: min-content !important;
+      gap: 0.3rem;
       padding: 0.4rem;
       background-color: var(--color-text);
       border-radius: 10px;
       > span {
         min-width: 1ch;
+        padding: 0.1rem 0.3rem;
+        text-wrap: nowrap;
       }
       &[aria-selected='true'] {
         background-color: var(--color-text-muted);
