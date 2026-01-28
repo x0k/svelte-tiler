@@ -35,7 +35,7 @@
   );
 </script>
 
-<div style="height: 200px;">
+<div class="split">
   <Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} />
 </div>
 
@@ -44,9 +44,12 @@
 {/snippet}
 
 <style>
-  :global .example {
+  :global .example .split {
     --color-success: #a6e22e;
     --color-text-dim: #90908a;
+
+    height: 200px;
+
     [data-split] {
       --resizer-len: calc(var(--gap) + 0.8rem);
       --resizer-offset: calc(-50% - var(--gap) / 2);

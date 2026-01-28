@@ -1,16 +1,18 @@
 <script lang="ts" module>
-  import { createContext, getContext, setContext, type Snippet } from 'svelte';
+  import { getContext, setContext, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import type { Tile, Tiles } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.svelte.js';
+
+  export type HeadersDirection = Direction | 'none';
 
   declare module '../model.js' {
     interface TileRegistry {
       tabs: {
         titles: string[];
         selectedTab: number;
-        headersDirection: Direction;
+        headersDirection: HeadersDirection;
         actions?: string;
         tabHeader?: string;
         empty?: string;
@@ -24,8 +26,8 @@
     A extends string,
   > {
     tabs: [string, Tile][];
-    /** @default "row" */
-    headersDirection?: Direction;
+    /** @default "none" */
+    headersDirection?: HeadersDirection;
     selectedTab?: number;
     actions?: A;
     tabHeader?: H;
@@ -46,7 +48,7 @@
       type: 'tabs',
       children,
       titles,
-      headersDirection: options.headersDirection ?? 'row',
+      headersDirection: options.headersDirection ?? 'none',
       selectedTab: options.selectedTab ?? 0,
       actions: options.actions,
       tabHeader: options.tabHeader,
@@ -100,21 +102,21 @@
 
   export function destroy(ctx: TilerContext, tile: Tiles['tabs']) {
     const parent = ctx.getTileParent(tile);
-    if (parent === undefined) {
-      return false;
+    if (parent !== undefined) {
+      const index = parent.children.findIndex((c) => c.id === tile.id);
+      if (index >= 0) {
+        const result = ctx.removeChild(parent, index);
+        if (result) {
+          return result;
+        }
+      }
     }
-    const index = parent.children.findIndex((c) => c.id === tile.id);
-    if (index < 0) {
-      return false;
-    }
-    const result = ctx.removeChild(parent, index);
-    if (!result && tile.children.length > 0) {
+    if (tile.children.length > 0) {
       tile.selectedTab = -1;
       tile.children.length = 0;
       tile.titles.length = 0;
-      return true;
     }
-    return result;
+    return false;
   }
 
   export function insertTabs(
@@ -236,7 +238,7 @@
     #index: number;
 
     constructor(ctx: DndContext<Tile>, id: string, index: number) {
-      super(ctx, 0.5);
+      super(ctx, tile.headersDirection === 'none' ? 0 : 0.5);
       this.#id = id;
       this.#index = index;
     }
@@ -244,7 +246,7 @@
     protected onDrop(tabs: Tiles['tabs']): void {
       const index = tile.children.findIndex((c) => c.id === this.#id);
       const part = tile.headersDirection === 'row' ? this.hpart : this.vpart;
-      const i = index < 0 ? this.#index : index + (part === 'start' ? 0 : 1);
+      const i = index < 0 ? this.#index : index + (part === 'end' ? 1 : 0);
       insertTabs(tile, i, tabs);
     }
   }

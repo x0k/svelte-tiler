@@ -27,7 +27,7 @@
   });
 </script>
 
-<div style="height: 200px;" bind:this={portalEl}>
+<div class="tabs" bind:this={portalEl}>
   <Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} {dnd} />
 </div>
 
@@ -36,10 +36,13 @@
 {/snippet}
 
 <style>
-  :global .example {
+  :global .example .tabs {
     --color-text-muted: #ccccc7;
     --color-text-dim: #90908a;
     --color-success: #a6e22e;
+
+    height: 200px;
+
     [data-tabs] {
       --gap: 0px;
       --indicator-size: 0.4rem;
