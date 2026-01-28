@@ -1,10 +1,12 @@
 export type FileNode = {
+  id: string;
   type: 'file';
   name: string;
   path: string;
 };
 
 export type FolderNode = {
+  id: string;
   type: 'folder';
   name: string;
   children: TreeNode[];
@@ -14,6 +16,7 @@ export type TreeNode = FileNode | FolderNode;
 
 function parseTree(files: Record<string, any>): TreeNode[] {
   const root: FolderNode = {
+    id: '',
     type: 'folder',
     name: '',
     children: [],
@@ -29,6 +32,7 @@ function parseTree(files: Record<string, any>): TreeNode[] {
 
       if (isFile) {
         current.children.push({
+          id: crypto.randomUUID(),
           type: 'file',
           name: part,
           path: fullPath,
@@ -42,6 +46,7 @@ function parseTree(files: Record<string, any>): TreeNode[] {
 
         if (!folder) {
           folder = {
+            id: crypto.randomUUID(),
             type: 'folder',
             name: part,
             children: [],

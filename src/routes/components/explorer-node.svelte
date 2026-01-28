@@ -117,7 +117,7 @@
   </div>
 
   {#if open}
-    {#each node.children as child}
+    {#each node.children as child (child.id)}
       <ExplorerNode
         {createDraggable}
         {onFileClick}

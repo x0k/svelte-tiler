@@ -78,6 +78,7 @@
     tiles: { split: Split, leaf: Leaf, tabs: Tabs },
     effects: {
       tabs: (tile) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         tile.selectedTab;
         activeTabs = tile;
       },
@@ -165,7 +166,7 @@
             empty: 'empty',
             tabs: [['README.md', createFileLeaf('./README.md')]],
           }),
-          constraints: defaultConstraints
+          constraints: defaultConstraints,
         },
       ],
     })
@@ -263,7 +264,7 @@
 {#snippet leaf(tile: Tiles['leaf'])}
   {#if tile.name === 'sidebar'}
     <Sidebar>
-      {#each tree as node}
+      {#each tree as node (node.id)}
         <ExplorerNode {node} {createDraggable} {onFileClick} />
       {/each}
     </Sidebar>

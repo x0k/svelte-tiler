@@ -14,6 +14,9 @@ b:
 c:
   pnpm run check
 
+f:
+  pnpm run format
+
 l:
   pnpm run lint
 

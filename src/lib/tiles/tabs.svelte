@@ -71,7 +71,10 @@
   > {
     createSplit?: (options: SplitOptions) => Tile;
     actions?: Registry<A, Snippet<[Tiles['tabs']]> | undefined>;
-    headers?: Registry<H, Snippet<[Tiles['tabs'], number, Draggable<Tile>]> | undefined>;
+    headers?: Registry<
+      H,
+      Snippet<[Tiles['tabs'], number, Draggable<Tile>]> | undefined
+    >;
     empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
   }
 

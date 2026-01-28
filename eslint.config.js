@@ -39,6 +39,7 @@ export default defineConfig(
         },
       ],
       'svelte/prefer-svelte-reactivity': 'off',
+      'svelte/no-at-html-tags': 'off',
     },
   },
   {
