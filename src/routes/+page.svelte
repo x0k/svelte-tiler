@@ -165,6 +165,7 @@
             empty: 'empty',
             tabs: [['README.md', createFileLeaf('./README.md')]],
           }),
+          constraints: defaultConstraints
         },
       ],
     })
