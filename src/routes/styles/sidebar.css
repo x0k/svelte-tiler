@@ -3,13 +3,11 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: var(--color-border);
   color: var(--color-text);
   font-family: system-ui, sans-serif;
   font-size: 11pt;
 }
-
-/* Header */
 
 .sidebar-header {
   flex-shrink: 0;
@@ -33,36 +31,31 @@
 }
 
 .icon-link {
-  all: unset; /* resets all inherited and browser-default styles */
-  display: inline-flex; /* so you can center/align icons */
+  all: unset;
+  display: inline-flex;
   cursor: pointer;
 }
-
-/* Explorer */
 
 .explorer {
   padding: 4px 0;
   overflow-y: auto;
 }
 
-/* Items */
-
 .item {
   padding: 4px 18px;
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
+  padding-left: 36px;
 
-  /* REQUIRED for icons */
   display: flex;
   align-items: center;
   gap: 6px;
 
   color: inherit;
-}
-
-.item:hover {
-  background: var(--color-surface-hover);
+  &:hover {
+    background: var(--color-surface-hover);
+  }
 }
 
 .item svg {
@@ -70,38 +63,21 @@
   color: currentColor;
 }
 
-/* Label text */
-
 .item .label {
   font-size: 12pt;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Folder / file */
-
-.folder {
-  color: var(--color-text);
-}
-
+.folder,
 .file {
   color: var(--color-text);
 }
-
-/* Active file (text + icon) */
 
 .file.active {
   background: var(--color-surface-alt);
   color: #fff;
 }
-
-/* Visual nesting only */
-
-.indent {
-  padding-left: 36px;
-}
-
-/* Chevron column */
 
 .chevron,
 .chevron-placeholder {
@@ -114,12 +90,9 @@
 }
 
 .chevron svg {
-  /* width: 12px;
-  height: 12px; */
+  height: 12px;
   color: var(--color-text-muted);
 }
-
-/* Keep files aligned with folders */
 
 .chevron-placeholder {
   visibility: hidden;

@@ -3,132 +3,24 @@
 @import './tiles.css';
 
 :root {
-  /* =======================================================
-     BASE / SURFACES
-     ======================================================= */
+  --color-bg: #272822;
+  --color-surface-alt: #414339;
+  --color-surface-hover: #3e3d32;
 
-  --color-bg: #272822; /* editor.background */
-  --color-surface: #1e1f1c; /* sideBar.background, tab well */
-  --color-surface-alt: #414339; /* dropdown / selection bg */
-  --color-surface-hover: #3e3d32; /* list.hoverBackground */
+  --color-text: #f8f8f2;
+  --color-text-muted: #ccccc7;
+  --color-text-dim: #90908a;
 
-  /* =======================================================
-     TEXT
-     ======================================================= */
+  --color-border: #1e1f1c;
+  --color-border-soft: #34352f;
+  --color-border-strong: #75715e;
 
-  --color-text: #f8f8f2; /* editor.foreground */
-  --color-text-muted: #ccccc7; /* tab.inactiveForeground */
-  --color-text-dim: #90908a; /* editorLineNumber.foreground */
-  --color-text-faint: #75715e; /* focus / inactive accents */
-
-  /* =======================================================
-     BORDERS / DIVIDERS
-     ======================================================= */
-
-  --color-border: #1e1f1c; /* tab.border */
-  --color-border-soft: #34352f; /* editorGroup.border */
-  --color-border-strong: #75715e; /* active borders */
-
-  /* =======================================================
-     SELECTION / FOCUS
-     ======================================================= */
-
-  --color-selection-bg: #878b9180; /* editor.selectionBackground */
-  --color-selection-muted: #414339; /* inactive selection */
-  --color-selection-hover: #575b6180;
-
-  --color-focus-ring: #99947c; /* focusBorder */
-
-  /* =======================================================
-     ACCENTS / STATES
-     ======================================================= */
-
-  --color-primary: #75715e; /* buttons, progress, badges */
-  --color-primary-strong: #f8f8f2;
+  --color-focus-ring: #99947c;
 
   --color-success: #a6e22e;
   --color-warning: #e2e22e;
   --color-error: #f92672;
   --color-info: #66d9ef;
-
-  /* =======================================================
-     CODE / EDITOR
-     ======================================================= */
-
-  --color-code-bg: #1e1f1c; /* editorWidget.background */
-  --color-code-line-highlight: #3e3d32;
-  --color-code-indent: #464741;
-  --color-code-indent-active: #767771;
-
-  /* =======================================================
-     SHADOWS
-     ======================================================= */
-
-  --color-shadow: #00000098; /* widget.shadow */
-
-  /* =======================================================
-     DIFF
-     ======================================================= */
-
-  --color-diff-added-bg: #4b661680;
-  --color-diff-removed-bg: #90274a70;
-  --color-diff-changed: #e6db74;
-
-  /* =======================================================
-     TERMINAL (ANSI)
-     ======================================================= */
-
-  --ansi-black: #333333;
-  --ansi-red: #c4265e;
-  --ansi-green: #86b42b;
-  --ansi-yellow: #b3b42b;
-  --ansi-blue: #6a7ec8;
-  --ansi-magenta: #8c6bc8;
-  --ansi-cyan: #56adbc;
-  --ansi-white: #e3e3dd;
-
-  --ansi-bright-black: #666666;
-  --ansi-bright-red: #f92672;
-  --ansi-bright-green: #a6e22e;
-  --ansi-bright-yellow: #e2e22e;
-  --ansi-bright-blue: #819aff;
-  --ansi-bright-magenta: #ae81ff;
-  --ansi-bright-cyan: #66d9ef;
-  --ansi-bright-white: #f8f8f2;
-
-  /* =======================================================
-     SYNTAX (Token colors)
-     ======================================================= */
-
-  --syntax-comment: #88846f;
-
-  --syntax-string: #e6db74;
-  --syntax-number: #ae81ff;
-  --syntax-constant: #ae81ff;
-
-  --syntax-keyword: #f92672;
-  --syntax-storage: #f92672;
-
-  --syntax-function: #a6e22e;
-  --syntax-class: #a6e22e;
-  --syntax-type: #66d9ef;
-
-  --syntax-parameter: #fd971f;
-  --syntax-variable: #f8f8f2;
-
-  --syntax-tag: #f92672;
-  --syntax-attribute: #a6e22e;
-
-  --syntax-invalid: #f44747;
-
-  /* =======================================================
-     MARKDOWN
-     ======================================================= */
-
-  --md-heading: #a6e22e;
-  --md-inline-code: #fd971f;
-  --md-quote: #75715e;
-  --md-link: #ae81ff;
 
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
@@ -136,10 +28,6 @@
 
   --scrollbar-size: 14px;
 
-  /* track */
-  --scrollbar-track-border: rgba(248, 248, 242, 0.06);
-
-  /* thumb */
   --scrollbar-thumb: oklab(54.67100000000001% -0.00371 0.02853 / 0.45);
   --scrollbar-thumb-hover: rgba(117, 113, 94, 0.7);
   --scrollbar-thumb-active: rgba(117, 113, 94, 0.9);

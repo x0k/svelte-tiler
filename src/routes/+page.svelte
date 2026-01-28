@@ -39,11 +39,6 @@
       import: 'default',
       query: '?marked',
     }),
-    import.meta.glob('./examples/*.md', {
-      base: '../',
-      import: 'default',
-      query: '?marked',
-    }),
     import.meta.glob(['./lib/**/*', './examples/*.svelte'], {
       base: '../',
       import: 'default',
@@ -161,10 +156,6 @@
         {
           tile: createLeaf('sidebar'),
           weight: 0.2,
-          constraints: [
-            { type: 'minSize', unit: 'px', value: 200 },
-            { type: 'maxSize', unit: 'weight', value: 0.4 },
-          ],
         },
         {
           tile: createTabs({

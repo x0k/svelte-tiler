@@ -68,15 +68,13 @@
 
   [data-tabs-bar] {
     display: flex;
-    flex-direction: row;
-    background: var(--color-code-bg);
+    background: var(--color-border);
     overflow: hidden;
     height: var(--top-bar-height);
   }
 
   [data-tabs-list] {
     display: flex;
-    flex-direction: row;
     min-width: 0;
     overflow-x: auto;
     gap: var(--tabs-bar-gap);
@@ -102,7 +100,6 @@
 
   [data-tabs-actions] {
     display: flex;
-    flex-direction: row;
     align-items: center;
     color: var(--color-text-muted);
     padding: 0 0.5rem;
@@ -187,55 +184,55 @@
     > svg {
       width: 50%;
       height: 50%;
-      object-fit: contain; /* Maintains aspect ratio */
+      object-fit: contain;
       > path {
-        fill: var(--color-surface);
+        fill: var(--color-border);
       }
     }
   }
+}
 
-  /* Firefox fallback */
-  /* * {
+/* Firefox fallback */
+/* * {
 	scrollbar-width: thin;
 	scrollbar-color: var(--scrollbar-thumb) transparent;
 } */
 
-  /* Chromium / WebKit */
+/* Chromium / WebKit */
 
-  ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
 
-  ::-webkit-scrollbar {
-    width: var(--scrollbar-size);
-    height: var(--scrollbar-size);
-  }
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
 
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  ::-webkit-scrollbar-track:vertical {
-    box-sizing: border-box;
-    border-left: 1px solid var(--color-border-soft);
-  }
+::-webkit-scrollbar-track:vertical {
+  box-sizing: border-box;
+  border-left: 1px solid var(--color-border-soft);
+}
 
-  ::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 0; /* прямоугольный thumb */
-    border: 1px solid transparent; /* визуальный отступ */
-    background-clip: padding-box;
-  }
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 0;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover);
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
 
-  ::-webkit-scrollbar-thumb:active {
-    background: var(--scrollbar-thumb-active);
-  }
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
 
-  ::-webkit-scrollbar-button {
-    display: none;
-  }
+::-webkit-scrollbar-button {
+  display: none;
 }

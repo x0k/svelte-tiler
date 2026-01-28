@@ -165,9 +165,9 @@
 
 <style>
   :global .example .editor {
-    --color-bg: #272822;
-    --color-text: #f8f8f2;
-    --color-text-muted: #ccccc7;
+    --color-bg: #f8f8f2;
+    --color-selected: #ccccc7;
+    --color-border: #272822;
     --color-success: #a6e22e;
 
     height: 500px;
@@ -178,7 +178,7 @@
       align-items: center;
       justify-content: center;
       &:focus {
-        outline: 1px solid var(--color-bg);
+        outline: 1px solid var(--color-border);
       }
     }
 
@@ -187,9 +187,9 @@
       padding: 0.5rem;
       border-radius: 10px;
       gap: 0.5rem;
-      background-color: var(--color-text);
+      background-color: var(--color-bg);
       &:hover {
-        background: var(--color-text-muted);
+        background: var(--color-selected);
       }
     }
 
@@ -199,7 +199,7 @@
       display: flex;
       flex-direction: column;
       gap: 2px;
-      background-color: var(--color-text);
+      background-color: var(--color-bg);
       border-radius: 10px;
     }
     [data-tabs-bar] {
@@ -231,7 +231,7 @@
       height: min-content !important;
       gap: 0.3rem;
       padding: 0.4rem;
-      background-color: var(--color-text);
+      background-color: var(--color-bg);
       border-radius: 10px;
       > span {
         min-width: 1ch;
@@ -239,7 +239,7 @@
         text-wrap: nowrap;
       }
       &[aria-selected='true'] {
-        background-color: var(--color-text-muted);
+        background-color: var(--color-selected);
       }
       &[data-over='true'] {
         background-color: var(--color-success);
@@ -258,7 +258,7 @@
         border-radius: 10px;
         background-color: transparent;
         resize: none;
-        border: 1px solid var(--color-bg);
+        border: 1px solid var(--color-border);
       }
       &::after {
         content: '';
