@@ -34,8 +34,8 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Upload apps
-        uses: actions/upload-artifact@v4
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v4
         with:
           path: "build/"
 
