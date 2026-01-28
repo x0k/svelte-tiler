@@ -2,6 +2,9 @@
 
 set -xe
 
+cs:
+  pnpm changeset
+
 d:
   pnpm run dev
 
@@ -10,6 +13,9 @@ b:
 
 c:
   pnpm run check
+
+l:
+  pnpm run lint
 
 p:
   pnpm run preview
