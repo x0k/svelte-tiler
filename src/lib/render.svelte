@@ -18,6 +18,8 @@
   $effect(() => {
     if (parent) {
       ctx.registerParent(tile, parent);
+    } else {
+      ctx.setUpdateRoot(tile, (t) => (parent = t));
     }
   });
 

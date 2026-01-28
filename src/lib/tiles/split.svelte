@@ -12,6 +12,7 @@
   import { almostEqual } from '$lib/shared/math.js';
   import type { Tile, TileProps, Tiles } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.svelte.js';
+  import { TileDroppable } from '$lib/dnd.js';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -77,44 +78,37 @@
     return create<R>;
   }
 
-  export function removeChild(
+  export function onRemoveChild(
     ctx: TilerContext,
     tile: Tiles['split'],
     i: number
   ) {
-    if (tile.children.length > 2) {
+    if (tile.children.length === 2) {
+      const droppable =
+        ctx.dnd.targetId && ctx.dnd.droppables.get(ctx.dnd.targetId);
+      if (
+        !droppable ||
+        (droppable instanceof TileDroppable &&
+          tile.id !== droppable.targetTileId)
+      ) {
+        tick().then(() => {
+          ctx.replaceWith(tile, tile.children[1 - i]);
+        });
+        return;
+      }
+    }
+    if (tile.children.length > 1) {
       tile.children.splice(i, 1);
       tile.weights.splice(i, 1);
       tile.constraints.splice(i, 1);
-      return true;
+      return;
     }
-    const parent = ctx.getTileParent(tile);
-    if (parent === undefined) {
-      return false;
-    }
-    const index = parent.children.findIndex((c) => c.id === tile.id);
-    if (index < 0) {
-      return false;
-    }
-    if (tile.children.length === 2) {
-      const id = tile.children[i].id;
-      // TODO: Should `removeChild` return a `Promise`?
-      // Or is there a better way to coordinate such effects?
-      tick().then(() => {
-        if (tile.children.length === 2) {
-          // WARN: I think there are conditions under which `index` will be incorrect.
-          parent.children[index] = tile.children[1 - i];
-        } else {
-          removeChild(
-            ctx,
-            tile,
-            tile.children.findIndex((c) => c.id === id)
-          );
-        }
-      });
-      return true;
-    } else {
-      return ctx.removeChild(parent, index);
+    ctx.destroy(tile);
+  }
+
+  export function onClear(ctx: TilerContext, tile: Tiles['split']) {
+    if (tile.children.length > 0) {
+      ctx.replaceWith(tile, tile.children[0]);
     }
   }
 

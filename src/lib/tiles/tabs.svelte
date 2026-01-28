@@ -84,39 +84,28 @@
     return create<H, E, A>;
   }
 
-  export function removeChild(
+  export function onRemoveChild(
     ctx: TilerContext,
     tile: Tiles['tabs'],
     i: number
   ) {
     if (tile.children.length < 2) {
-      return destroy(ctx, tile);
+      ctx.destroy(tile);
+      return
     }
     if (tile.selectedTab >= i) {
       tile.selectedTab = Math.max(0, tile.selectedTab - 1);
     }
     tile.children.splice(i, 1);
     tile.titles.splice(i, 1);
-    return true;
   }
 
-  export function destroy(ctx: TilerContext, tile: Tiles['tabs']) {
-    const parent = ctx.getTileParent(tile);
-    if (parent !== undefined) {
-      const index = parent.children.findIndex((c) => c.id === tile.id);
-      if (index >= 0) {
-        const result = ctx.removeChild(parent, index);
-        if (result) {
-          return result;
-        }
-      }
-    }
+  export function onClear(_ctx: TilerContext, tile: Tiles['tabs']) {
     if (tile.children.length > 0) {
       tile.selectedTab = -1;
       tile.children.length = 0;
       tile.titles.length = 0;
     }
-    return false;
   }
 
   export function insertTabs(
@@ -159,7 +148,6 @@
     ClonedGhost,
     DndContext,
     Draggable,
-    Droppable,
     type DraggableOptions,
     type StopEvent,
   } from '$lib/shared/dnd.svelte.js';
@@ -170,6 +158,7 @@
   } from '$lib/shared/spatial.js';
   import { getTilerContext } from '$lib/context.svelte.js';
   import type { TileProps } from '$lib/model.js';
+  import { TileDroppable } from '$lib/dnd.js';
 
   let {
     tile = $bindable(),
@@ -193,7 +182,7 @@
   );
   const edgeRatio = $derived(tabsCtx?.createSplit ? 0.1 : 0);
 
-  class TabsDroppable extends Droppable<Tile> {
+  class TabsDroppable extends TileDroppable<Tiles['tabs']> {
     accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
       const t = d.data;
       return (
@@ -220,7 +209,7 @@
     vpart: EdgePart | undefined = $state.raw();
 
     constructor(ctx: DndContext<Tile>, edgeRatio: number) {
-      super(ctx);
+      super(ctx, tile.id);
       this.#edgeRatio = edgeRatio;
     }
 
@@ -243,10 +232,18 @@
       this.#index = index;
     }
 
-    protected onDrop(tabs: Tiles['tabs']): void {
-      const index = tile.children.findIndex((c) => c.id === this.#id);
-      const part = tile.headersDirection === 'row' ? this.hpart : this.vpart;
-      const i = index < 0 ? this.#index : index + (part === 'end' ? 1 : 0);
+    protected onDrop(tabs: Tiles['tabs'], d: Draggable): void {
+      let i = tile.children.findIndex((c) => c.id === this.#id);
+      if (i < 0) {
+        i = this.#index;
+      } else if (
+        tile.headersDirection !== 'none'
+          ? (tile.headersDirection === 'row' ? this.hpart : this.vpart) ===
+            'end'
+          : d instanceof DraggableTab && d.index <= i
+      ) {
+        i++;
+      }
       insertTabs(tile, i, tabs);
     }
   }
@@ -311,7 +308,7 @@
     }
   }
 
-  const droppableSpacer = $derived(new DroppableSurface(ctx.dnd));
+  const droppableSpacer = $derived(new DroppableSurface(ctx.dnd, tile.id));
   const droppableContent = $derived(new DroppableContent(ctx.dnd, edgeRatio));
   const droppableEmpty = $derived(new DroppableContent(ctx.dnd, edgeRatio));
 </script>

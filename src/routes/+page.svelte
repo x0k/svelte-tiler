@@ -53,7 +53,7 @@
       base: '../../',
       import: 'default',
       query: '?shiki',
-    }),
+    })
   );
 
   const examples = import.meta.glob('./examples/*', {
@@ -68,7 +68,19 @@
       return portalEl;
     },
   });
-  const ctx = new TilerContext({
+
+  class CustomTilerContext extends TilerContext {
+    removeChild(tile: Tile, index: number): void {
+      if (tile.id === layout.id) {
+        const child = tile.children[index];
+        this.definitions[child.type].onClear(this, child as never);
+        return;
+      }
+      super.removeChild(tile, index);
+    }
+  }
+
+  const ctx = new CustomTilerContext({
     dnd,
     tiles: { split: Split, leaf: Leaf, tabs: Tabs },
     effects: {
@@ -158,6 +170,7 @@
         },
         {
           tile: createTabs({
+            headersDirection: 'row',
             tabHeader: 'tabHeader',
             actions: 'actions',
             empty: 'empty',
@@ -197,6 +210,7 @@
     return new DraggableTreeNode(ctx.dnd, {
       get data() {
         return createTabs({
+          headersDirection: 'row',
           tabHeader: 'tabHeader',
           actions: 'actions',
           empty: 'empty',
@@ -249,7 +263,7 @@
   <button
     class="button"
     onclick={() => {
-      Tabs.destroy(ctx, tile);
+      ctx.destroy(tile);
     }}
   >
     <CodiconCloseAll />

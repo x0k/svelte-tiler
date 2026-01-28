@@ -44,10 +44,6 @@
     height: 200px;
 
     [data-tabs] {
-      --gap: 0px;
-      --indicator-size: 0.4rem;
-      --indicator-offset: calc(-1 * (var(--gap) + var(--indicator-size)) / 2);
-
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -61,7 +57,7 @@
       overflow-x: auto;
       scrollbar-width: thin;
       display: flex;
-      gap: var(--gap);
+      gap: 0.2rem;
       padding: 0.2rem;
       background-color: var(--color-text-dim);
       border-radius: 10px;
@@ -77,21 +73,7 @@
         background-color: var(--color-text-muted);
       }
       &[data-over='true'] {
-        &::before {
-          content: '';
-          inset: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          position: absolute;
-          height: 70%;
-          border-radius: 3px;
-          width: var(--indicator-size);
-          left: var(--indicator-offset);
-          background-color: var(--color-success);
-        }
-        &[data-hpart='end']::before {
-          left: calc(100% + var(--indicator-offset));
-        }
+        background-color: var(--color-success);
       }
     }
     [data-tabs-content] {

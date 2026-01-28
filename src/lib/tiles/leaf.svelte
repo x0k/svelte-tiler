@@ -3,7 +3,6 @@
 
   import type { Registry } from '$lib/shared/registry.js';
   import type { TileProps, Tiles } from '$lib/model.js';
-  import type { TilerContext } from '$lib/context.svelte.js';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -30,21 +29,9 @@
     });
   }
 
-  export function removeChild() {
-    return false;
-  }
+  export function onRemoveChild() {}
 
-  export function destroy(ctx: TilerContext, tile: Tiles['leaf']) {
-    const parent = ctx.getTileParent(tile);
-    if (parent === undefined) {
-      return false;
-    }
-    const index = parent.children.findIndex((c) => c.id === tile.id);
-    if (index < 0) {
-      return false;
-    }
-    return ctx.removeChild(parent, index);
-  }
+  export function onClear() {}
 </script>
 
 <script lang="ts">

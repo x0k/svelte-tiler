@@ -3,7 +3,6 @@
 
   import CodiconTrash from '~icons/codicon/trash';
   import CodiconNewFile from '~icons/codicon/new-file';
-  import CodiconFile from '~icons/codicon/file';
 
   import type { Constraint } from '$lib/shared/constraints.js';
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
@@ -33,6 +32,7 @@
     content.set(leaf.id, 'New file content');
     return leaf;
   }
+  const splitGapPx = 8;
   const createTabs = Tabs.setup({
     headers: fromRecord({
       editorHeader,
@@ -63,7 +63,7 @@
       const next = Split.create({
         direction: type,
         children: tiles,
-        gapPx: 1,
+        gapPx: splitGapPx,
       });
       if (parent && parent.children.length > 1) {
         const index = parent.children.findIndex((c) => c.id === pivot.id);
@@ -95,12 +95,11 @@
   setTilerContext(ctx);
 </script>
 
-<div class="editor" bind:this={portalEl}>
+<div class="editor" style="--split-gap: {splitGapPx}px;" bind:this={portalEl}>
   <Panel bind:layout />
 </div>
 
 {#snippet editorHeader(tile: Tiles['tabs'], i: number)}
-  <CodiconFile />
   <span
     bind:textContent={
       () => tile.titles[i],
@@ -112,7 +111,6 @@
     contenteditable
   ></span>
   <button
-    class="button"
     onclick={(e) => {
       e.stopPropagation();
       const id = tile.children[i].id;
@@ -129,7 +127,10 @@
   <button
     class="button"
     onclick={() => {
-      console.log(tile);
+      Tabs.insertTabs(tile, tile.children.length, {
+        titles: [defaultTitle],
+        children: [createLeaf()],
+      });
     }}
   >
     <CodiconNewFile />
@@ -159,7 +160,6 @@
 
 <style>
   :global .example .editor {
-    
     height: 500px;
 
     button {
@@ -171,8 +171,8 @@
 
     .button {
       cursor: pointer;
-      padding: 2px;
-      border-radius: 4px;
+      padding: 0.5rem;
+      border-radius: 10px;
       gap: 0.5rem;
       background-color: var(--color-text-dim);
       &:hover {
@@ -181,29 +181,25 @@
     }
 
     [data-tabs] {
-      --tabs-bar-gap: 1px;
-      --indicator-size: 2px;
-      --indicator-offset: calc(
-        -1 * (var(--tabs-bar-gap) + var(--indicator-size)) / 2
-      );
-      --tabs-bar-height: 28px;
-
       height: 100%;
       width: 100%;
       display: flex;
       flex-direction: column;
+      gap: calc(var(--split-gap) /2 );
     }
     [data-tabs-bar] {
       display: flex;
       overflow: hidden;
-      height: var(--tabs-bar-height);
       align-items: center;
+      padding: 0.2rem;
+      background-color: var(--color-text-dim);
+      border-radius: 10px;
     }
     [data-tabs-list] {
       display: flex;
+      gap: 0.2rem;
       min-width: 0;
       overflow-x: auto;
-      gap: var(--tabs-bar-gap);
       scrollbar-width: thin;
     }
     [data-tabs-spacer] {
@@ -212,19 +208,77 @@
     [data-tabs-actions] {
       display: flex;
       align-items: center;
-      padding: 0 0.5rem;
+      gap: 0.5rem;
     }
     [data-tabs-header] {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 0.5rem;
+      padding: 0.3rem;
+      border: 1px solid var(--color-text-muted);
+      background-color: var(--color-text-dim);
+      border-radius: 10px;
+      > span {
+        min-width: 1ch;
+      }
+      &[aria-selected='true'] {
+        background-color: var(--color-text-muted);
+      }
+    }
+    [data-tabs-content] {
+      flex: 1 1 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      background-color: var(--color-text-dim);
+      border-radius: 10px;
+      padding: 0.1rem;
+      > textarea {
+        flex-grow: 1;
+        padding: 0.4rem;
+        border-radius: 10px;
+        background-color: transparent;
+        border: none;
+        resize: none;
+      }
     }
     [data-tabs-empty] {
       flex: 1 1 0;
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+    [data-split] {
+      --resizer-len: calc(var(--gap) + 0.8rem);
+      --resizer-offset: calc(-50% - var(--gap) / 2);
+
+      height: 100%;
+      width: 100%;
+    }
+    [data-split-item] {
+      position: relative;
+    }
+    [data-split-resizer] {
+      position: absolute;
+      z-index: 10;
+      inset: 0;
+      border-radius: 5px;
+      background-color: var(--color-success);
+    }
+    [data-dir='row'] > [data-split-item] > [data-split-resizer] {
+      cursor: col-resize;
+      height: 2rem;
+      width: var(--resizer-len);
+      top: 50%;
+      transform: translate(var(--resizer-offset), -50%);
+    }
+    [data-dir='column'] > [data-split-item] > [data-split-resizer] {
+      cursor: row-resize;
+      height: var(--resizer-len);
+      width: 2rem;
+      left: 50%;
+      transform: translate(-50%, var(--resizer-offset));
     }
   }
 </style>
