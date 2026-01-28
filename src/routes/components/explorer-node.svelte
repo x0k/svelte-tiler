@@ -64,8 +64,7 @@
     onFileClick: (node: FileNode) => void;
   } = $props();
 
-  // svelte-ignore state_referenced_locally
-  let open = $state(level === 1);
+  let open = $state(false);
 
   const draggable = $derived(createDraggable(node));
 

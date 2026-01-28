@@ -37,8 +37,8 @@
 
 <style>
   :global .example .tabs {
+    --color-text: #f8f8f2;
     --color-text-muted: #ccccc7;
-    --color-text-dim: #90908a;
     --color-success: #a6e22e;
 
     height: 200px;
@@ -59,7 +59,7 @@
       display: flex;
       gap: 0.2rem;
       padding: 0.2rem;
-      background-color: var(--color-text-dim);
+      background-color: var(--color-text);
       border-radius: 10px;
     }
     [data-tabs-header] {
@@ -68,7 +68,7 @@
       height: min-content !important;
       padding: 0.5rem 2rem;
       border-radius: 10px;
-      background-color: var(--color-text-dim);
+      background-color: var(--color-text);
       &[aria-selected='true'] {
         background-color: var(--color-text-muted);
       }
@@ -81,7 +81,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--color-text-dim);
+      background-color: var(--color-text);
       border-radius: 15px;
       &[data-over='true'] {
         background-color: var(--color-success);

@@ -20,19 +20,24 @@
   const names = new Map<string, string>();
   const content = new SvelteMap<string, string>();
 
-  const defaultTitle = 'New file';
+  const defaultTitle = 'File';
   const defaultConstraints: Constraint[] = [
     { type: 'minSize', unit: 'px', value: 80 },
     { type: 'minSize', unit: 'weight', value: 0.2 },
   ];
-  const _createLeaf = Leaf.setup(fromConstant(leaf));
-  function createLeaf() {
-    const leaf = _createLeaf('file');
-    names.set(leaf.id, defaultTitle);
-    content.set(leaf.id, 'New file content');
-    return leaf;
+  const createLeaf = Leaf.setup(fromConstant(leaf));
+  let count = 0;
+  function createTitledLeaf() {
+    const leaf = createLeaf('file');
+    const nextTitle = `${defaultTitle} (${count})`;
+    names.set(leaf.id, nextTitle);
+    content.set(leaf.id, `File content (${count++})`);
+    return {
+      titles: [nextTitle],
+      children: [leaf],
+    };
   }
-  const splitGapPx = 8;
+  const splitGapPx = 10;
   const createTabs = Tabs.setup({
     headers: fromRecord({
       editorHeader,
@@ -109,6 +114,7 @@
       }
     }
     contenteditable
+    spellcheck={false}
   ></span>
   <button
     onclick={(e) => {
@@ -127,10 +133,7 @@
   <button
     class="button"
     onclick={() => {
-      Tabs.insertTabs(tile, tile.children.length, {
-        titles: [defaultTitle],
-        children: [createLeaf()],
-      });
+      Tabs.insertTabs(tile, tile.children.length, createTitledLeaf());
     }}
   >
     <CodiconNewFile />
@@ -141,10 +144,7 @@
   <button
     class="button"
     onclick={() => {
-      Tabs.insertTabs(tile, 0, {
-        titles: [defaultTitle],
-        children: [createLeaf()],
-      });
+      Tabs.insertTabs(tile, 0, createTitledLeaf());
     }}
   >
     <CodiconNewFile />
@@ -160,6 +160,11 @@
 
 <style>
   :global .example .editor {
+    --color-bg: #272822;
+    --color-text: #f8f8f2;
+    --color-text-muted: #ccccc7;
+    --color-success: #a6e22e;
+
     height: 500px;
 
     button {
@@ -167,6 +172,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      &:focus {
+        outline: 1px solid var(--color-bg);
+      }
     }
 
     .button {
@@ -174,7 +182,7 @@
       padding: 0.5rem;
       border-radius: 10px;
       gap: 0.5rem;
-      background-color: var(--color-text-dim);
+      background-color: var(--color-text);
       &:hover {
         background: var(--color-text-muted);
       }
@@ -185,15 +193,15 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: calc(var(--split-gap) /2 );
+      gap: 2px;
+      background-color: var(--color-text);
+      border-radius: 10px;
     }
     [data-tabs-bar] {
       display: flex;
       overflow: hidden;
       align-items: center;
-      padding: 0.2rem;
-      background-color: var(--color-text-dim);
-      border-radius: 10px;
+      padding: 0.4rem;
     }
     [data-tabs-list] {
       display: flex;
@@ -215,9 +223,8 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.3rem;
-      border: 1px solid var(--color-text-muted);
-      background-color: var(--color-text-dim);
+      padding: 0.4rem;
+      background-color: var(--color-text);
       border-radius: 10px;
       > span {
         min-width: 1ch;
@@ -225,22 +232,56 @@
       &[aria-selected='true'] {
         background-color: var(--color-text-muted);
       }
+      &[data-over='true'] {
+        background-color: var(--color-success);
+      }
     }
     [data-tabs-content] {
       flex: 1 1 0;
       display: flex;
       align-items: stretch;
       justify-content: stretch;
-      background-color: var(--color-text-dim);
-      border-radius: 10px;
-      padding: 0.1rem;
+      padding: 0.2rem;
+      position: relative;
       > textarea {
         flex-grow: 1;
         padding: 0.4rem;
         border-radius: 10px;
         background-color: transparent;
-        border: none;
         resize: none;
+        border: 1px solid var(--color-bg);
+      }
+      &::after {
+        content: '';
+        position: absolute;
+        pointer-events: none;
+        background: var(--color-success);
+        border-radius: 10px;
+        transition: inset 160ms ease;
+      }
+      &[data-over='true'] {
+        &::after {
+          opacity: 0.4;
+        }
+        &[data-hpart='center'][data-vpart='center']::after {
+          inset: 0;
+        }
+
+        &[data-hpart='start']::after {
+          inset: 0 50% 0 0;
+        }
+
+        &[data-hpart='end']::after {
+          inset: 0 0 0 50%;
+        }
+
+        &[data-hpart='center'][data-vpart='start']::after {
+          inset: 0 0 50% 0;
+        }
+
+        &[data-hpart='center'][data-vpart='end']::after {
+          inset: 50% 0 0 0;
+        }
       }
     }
     [data-tabs-empty] {
@@ -250,7 +291,7 @@
       justify-content: center;
     }
     [data-split] {
-      --resizer-len: calc(var(--gap) + 0.8rem);
+      --resizer-len: calc(var(--gap) - 4px);
       --resizer-offset: calc(-50% - var(--gap) / 2);
 
       height: 100%;
@@ -261,24 +302,17 @@
     }
     [data-split-resizer] {
       position: absolute;
-      z-index: 10;
       inset: 0;
-      border-radius: 5px;
-      background-color: var(--color-success);
     }
     [data-dir='row'] > [data-split-item] > [data-split-resizer] {
       cursor: col-resize;
-      height: 2rem;
       width: var(--resizer-len);
-      top: 50%;
-      transform: translate(var(--resizer-offset), -50%);
+      transform: translateX(var(--resizer-offset));
     }
     [data-dir='column'] > [data-split-item] > [data-split-resizer] {
       cursor: row-resize;
       height: var(--resizer-len);
-      width: 2rem;
-      left: 50%;
-      transform: translate(-50%, var(--resizer-offset));
+      transform: translateY(var(--resizer-offset));
     }
   }
 </style>

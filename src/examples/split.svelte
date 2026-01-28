@@ -45,8 +45,8 @@
 
 <style>
   :global .example .split {
+    --color-text: #f8f8f2;
     --color-success: #a6e22e;
-    --color-text-dim: #90908a;
 
     height: 200px;
 
@@ -87,7 +87,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: var(--color-text-dim);
+      background-color: var(--color-text);
       border-radius: 5px;
       font-size: larger;
     }
