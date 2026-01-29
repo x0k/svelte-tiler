@@ -11,8 +11,8 @@
   import type { Direction } from '$lib/shared/spatial.js';
   import { almostEqual } from '$lib/shared/math.js';
   import type { Tile, TileProps, Tiles } from '$lib/model.js';
-  import type { TilerContext } from '$lib/context.svelte.js';
-  import { TileDroppable } from '$lib/dnd.js';
+  import type { TilerContext } from '$lib/context.js';
+  import { TileDropTarget } from '$lib/dnd.js';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -88,11 +88,11 @@
         ctx.dnd.targetId && ctx.dnd.droppables.get(ctx.dnd.targetId);
       if (
         !droppable ||
-        (droppable instanceof TileDroppable &&
-          tile.children.every((c) => c.id !== droppable.targetTileId))
+        (droppable instanceof TileDropTarget &&
+          tile.children.every((c) => c.id !== droppable.tileId))
       ) {
         tick().then(() => {
-          ctx.replaceWith(tile, tile.children[1 - i]);
+          ctx.replaceTile(tile.id, tile.children[1 - i]);
         });
         return;
       }
@@ -103,14 +103,10 @@
       tile.constraints.splice(i, 1);
       return;
     }
-    ctx.destroy(tile);
+    ctx.remove(tile);
   }
 
-  export function onClear(ctx: TilerContext, tile: Tiles['split']) {
-    if (tile.children.length > 0) {
-      ctx.replaceWith(tile, tile.children[0]);
-    }
-  }
+  export function onClear(_ctx: TilerContext, _tile: Tiles['split']) {}
 
   export function insertTile(
     node: Tiles['split'],
@@ -201,7 +197,7 @@
             : currentPos > resizerRect.top
       ) {
         if (currentDir !== lastDir) {
-          startPos = previousPos;
+          startPos = currentPos;
           this.syncWeights();
           lastDir = currentDir;
         }

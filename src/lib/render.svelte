@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getTilerContext } from './context.svelte.ts';
+  import { getTilerContext } from './context.js';
   import type { Tile } from './model.ts';
   import Self from './render.svelte';
 
@@ -15,13 +15,7 @@
 
   const ctx = getTilerContext();
 
-  $effect(() => {
-    if (parent) {
-      ctx.registerParent(tile, parent);
-    } else {
-      ctx.setUpdateRoot(tile, (t) => (parent = t));
-    }
-  });
+  $effect(() => ctx.registerTile(tile, parent ?? ((t) => (parent = t))));
 
   $effect(() => ctx.getTileEffect(tile)?.(tile as never));
 

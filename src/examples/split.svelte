@@ -36,7 +36,7 @@
 </script>
 
 <div class="split">
-  <Tiler bind:layout tiles={{ leaf: Leaf, split: Split, tabs: Tabs }} />
+  <Tiler bind:layout definitions={{ leaf: Leaf, split: Split, tabs: Tabs }} />
 </div>
 
 {#snippet leaf(tile: Tiles['leaf'])}

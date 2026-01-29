@@ -3,7 +3,7 @@
     setTilerContext,
     TilerContext,
     type TilerContextOptions,
-  } from './context.svelte.ts';
+  } from './context.js';
   import type { Tile } from './model.js';
   import Panel from './panel.svelte';
 

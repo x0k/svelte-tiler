@@ -99,7 +99,7 @@
   });
   const ctx = new TilerContext({
     dnd,
-    tiles: { leaf: Leaf, split: Split, tabs: Tabs },
+    definitions: { leaf: Leaf, split: Split, tabs: Tabs },
   });
   setTilerContext(ctx);
 </script>
@@ -125,7 +125,7 @@
     onclick={(e) => {
       e.stopPropagation();
       const id = tile.children[i].id;
-      ctx.removeChild(tile, i);
+      ctx.removeChildFrom(tile, i);
       names.delete(id);
       content.delete(id);
     }}
