@@ -26,7 +26,11 @@
 </script>
 
 <div class="tabs" bind:this={portalEl}>
-  <Tiler bind:layout definitions={{ leaf: Leaf, split: Split, tabs: Tabs }} {dnd} />
+  <Tiler
+    bind:layout
+    definitions={{ leaf: Leaf, split: Split, tabs: Tabs }}
+    {dnd}
+  />
 </div>
 
 {#snippet leaf(tile: Tiles['leaf'])}
