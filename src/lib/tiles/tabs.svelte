@@ -58,7 +58,7 @@
   }
 
   interface SplitOptions {
-    type: 'row' | 'column';
+    type: Direction;
     parent: Tile | undefined;
     pivot: Tiles['tabs'];
     offset: number;
