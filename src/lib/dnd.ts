@@ -1,32 +1,38 @@
 import {
-  DndContext,
   Draggable,
   Droppable,
   type DraggableOptions,
 } from './shared/dnd.svelte.js';
 import type { Tile } from './model.js';
+import type { TilerContext } from './context.svelte.ts';
 
 export class TileDropTarget<T extends Tile> extends Droppable<Tile, T> {
+  protected tilerCtx: TilerContext;
+
   constructor(
-    ctx: DndContext<Tile>,
-    public readonly targetTileId: string
+    ctx: TilerContext,
+    public readonly tileId: string
   ) {
-    super(ctx);
+    super(ctx.dnd);
+    this.tilerCtx = ctx;
   }
 }
 
 export interface TileDragSourceOptions extends DraggableOptions<Tile> {
-  sourceTargetId: string;
-  sourceIndex: number;
+  parentTileId: string;
+  childIndex: number;
 }
 
 export class TileDragSource extends Draggable<Tile> {
-  readonly sourceTargetId: string;
-  readonly sourceIndex: number;
+  protected tilerCtx: TilerContext;
 
-  constructor(ctx: DndContext<Tile>, options: TileDragSourceOptions) {
-    super(ctx, options);
-    this.sourceTargetId = options.sourceTargetId;
-    this.sourceIndex = options.sourceIndex;
+  readonly parentTileId: string;
+  readonly childIndex: number;
+
+  constructor(ctx: TilerContext, options: TileDragSourceOptions) {
+    super(ctx.dnd, options);
+    this.tilerCtx = ctx;
+    this.parentTileId = options.parentTileId;
+    this.childIndex = options.childIndex;
   }
 }

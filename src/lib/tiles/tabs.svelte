@@ -147,12 +147,7 @@
 </script>
 
 <script lang="ts">
-  import {
-    DndContext,
-    Draggable,
-    type DraggableOptions,
-    type StopEvent,
-  } from '$lib/shared/dnd.svelte.js';
+  import { Draggable, type StopEvent } from '$lib/shared/dnd.svelte.js';
   import {
     getRectParts,
     type Direction,
@@ -160,7 +155,7 @@
   } from '$lib/shared/spatial.js';
   import { getTilerContext } from '$lib/context.svelte.js';
   import type { TileProps } from '$lib/model.js';
-  import { TileDropTarget } from '$lib/dnd.js';
+  import { TileDragSource, TileDropTarget } from '$lib/dnd.js';
 
   let {
     tile = $bindable(),
@@ -184,7 +179,7 @@
   );
   const edgeRatio = $derived(tabsCtx?.createSplit ? 0.1 : 0);
 
-  class TabsDroppable extends TileDropTarget<Tiles['tabs']> {
+  class TabsTileDropTarget extends TileDropTarget<Tiles['tabs']> {
     accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
       const t = d.data;
       return (
@@ -199,18 +194,18 @@
     }
   }
 
-  class DroppableSurface extends TabsDroppable {
+  class SimpleTabsDropTarget extends TabsTileDropTarget {
     protected onDrop(tabs: Tiles['tabs']): void {
       insertTabs(tile, tile.children.length, tabs);
     }
   }
 
-  class DroppableRect extends TabsDroppable {
+  class SegmentedTabsTileDropTarget extends TabsTileDropTarget {
     #edgeRatio: number;
     hpart: EdgePart | undefined = $state.raw();
     vpart: EdgePart | undefined = $state.raw();
 
-    constructor(ctx: DndContext<Tile>, edgeRatio: number) {
+    constructor(ctx: TilerContext, edgeRatio: number) {
       super(ctx, tile.id);
       this.#edgeRatio = edgeRatio;
     }
@@ -224,11 +219,11 @@
     }
   }
 
-  class DroppableTab extends DroppableRect {
+  class SegmentedTabDropTarget extends SegmentedTabsTileDropTarget {
     #id: string;
     #index: number;
 
-    constructor(ctx: DndContext<Tile>, id: string, index: number) {
+    constructor(ctx: TilerContext, id: string, index: number) {
       super(ctx, tile.headersDirection === 'none' ? 0 : 0.5);
       this.#id = id;
       this.#index = index;
@@ -242,7 +237,7 @@
         tile.headersDirection !== 'none'
           ? (tile.headersDirection === 'row' ? this.hpart : this.vpart) ===
             'end'
-          : d instanceof DraggableTab && d.index <= i
+          : d instanceof DraggableTab && d.childIndex <= i
       ) {
         i++;
       }
@@ -250,13 +245,13 @@
     }
   }
 
-  class DroppableContent extends DroppableRect {
+  class SegmentedContentDropTarget extends SegmentedTabsTileDropTarget {
     protected onDrop(tabs: Tiles['tabs'], d: Draggable): void {
       const id = tabs.children[0].id;
       if (this.hpart === 'center' && this.vpart === 'center') {
         let i = tile.children.findIndex((t) => t.id === id);
         if (i < 0 && d instanceof DraggableTab) {
-          i = d.index;
+          i = d.childIndex;
         }
         insertTabs(tile, i < 0 ? tile.children.length : i, tabs);
       } else if (tabsCtx?.createSplit) {
@@ -279,23 +274,12 @@
     }
   }
 
-  interface DraggableTabOptions extends DraggableOptions<Tile> {
-    index: number;
-  }
-
-  class DraggableTab extends Draggable<Tile> {
-    readonly index: number;
-
-    constructor(ctx: DndContext<Tile>, options: DraggableTabOptions) {
-      super(ctx, options);
-      this.index = options.index;
-    }
-
+  class DraggableTab extends TileDragSource {
     protected onStop({ reason }: StopEvent): void {
       if (reason !== 'drop') {
         return;
       }
-      ctx.removeChild(tile, this.index);
+      ctx.removeChild(tile, this.childIndex);
     }
   }
 
@@ -306,9 +290,13 @@
     }
   }
 
-  const droppableSpacer = $derived(new DroppableSurface(ctx.dnd, tile.id));
-  const droppableContent = $derived(new DroppableContent(ctx.dnd, edgeRatio));
-  const droppableEmpty = $derived(new DroppableContent(ctx.dnd, edgeRatio));
+  const droppableSpacer = $derived(new SimpleTabsDropTarget(ctx, tile.id));
+  const droppableContent = $derived(
+    new SegmentedContentDropTarget(ctx, edgeRatio)
+  );
+  const droppableEmpty = $derived(
+    new SegmentedContentDropTarget(ctx, edgeRatio)
+  );
 </script>
 
 {#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}
@@ -320,9 +308,10 @@
     <div data-tabs-bar>
       <div data-tabs-list>
         {#each tile.children as t, i (t.id)}
-          {@const droppable = new DroppableTab(ctx.dnd, t.id, i)}
-          {@const draggable = new DraggableTab(ctx.dnd, {
-            index: i,
+          {@const droppable = new SegmentedTabDropTarget(ctx, t.id, i)}
+          {@const draggable = new DraggableTab(ctx, {
+            parentTileId: tile.id,
+            childIndex: i,
             data: create({
               ...tile,
               tabs: [[tile.titles[i], t]],

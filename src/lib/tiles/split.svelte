@@ -89,7 +89,7 @@
       if (
         !droppable ||
         (droppable instanceof TileDropTarget &&
-          tile.children.every((c) => c.id !== droppable.targetTileId))
+          tile.children.every((c) => c.id !== droppable.tileId))
       ) {
         tick().then(() => {
           ctx.replaceWith(tile, tile.children[1 - i]);
