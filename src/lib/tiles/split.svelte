@@ -12,7 +12,7 @@
   import { almostEqual } from '$lib/shared/math.js';
   import type { Tile, TileProps, Tiles } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.svelte.js';
-  import { TileDroppable } from '$lib/dnd.js';
+  import { TileDropTarget } from '$lib/dnd.js';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -88,7 +88,7 @@
         ctx.dnd.targetId && ctx.dnd.droppables.get(ctx.dnd.targetId);
       if (
         !droppable ||
-        (droppable instanceof TileDroppable &&
+        (droppable instanceof TileDropTarget &&
           tile.children.every((c) => c.id !== droppable.targetTileId))
       ) {
         tick().then(() => {

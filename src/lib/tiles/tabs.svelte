@@ -160,7 +160,7 @@
   } from '$lib/shared/spatial.js';
   import { getTilerContext } from '$lib/context.svelte.js';
   import type { TileProps } from '$lib/model.js';
-  import { TileDroppable } from '$lib/dnd.js';
+  import { TileDropTarget } from '$lib/dnd.js';
 
   let {
     tile = $bindable(),
@@ -184,7 +184,7 @@
   );
   const edgeRatio = $derived(tabsCtx?.createSplit ? 0.1 : 0);
 
-  class TabsDroppable extends TileDroppable<Tiles['tabs']> {
+  class TabsDroppable extends TileDropTarget<Tiles['tabs']> {
     accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
       const t = d.data;
       return (
