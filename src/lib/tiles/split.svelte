@@ -106,11 +106,7 @@
     ctx.destroy(tile);
   }
 
-  export function onClear(ctx: TilerContext, tile: Tiles['split']) {
-    if (tile.children.length > 0) {
-      ctx.replaceWith(tile, tile.children[0]);
-    }
-  }
+  export function onClear(_ctx: TilerContext, _tile: Tiles['split']) {}
 
   export function insertTile(
     node: Tiles['split'],
