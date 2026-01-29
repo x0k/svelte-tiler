@@ -217,6 +217,11 @@
     }
     [data-tabs-spacer] {
       flex-grow: 1;
+      height: 100%;
+      border-radius: 10px;
+      &[data-over='true'] {
+        background-color: var(--color-success);
+      }
     }
     [data-tabs-actions] {
       display: flex;
@@ -233,6 +238,9 @@
       padding: 0.4rem;
       background-color: var(--color-bg);
       border-radius: 10px;
+      > :first-child {
+        cursor: move;
+      }
       > span {
         min-width: 1ch;
         padding: 0.1rem 0.3rem;
