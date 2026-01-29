@@ -125,7 +125,7 @@
     onclick={(e) => {
       e.stopPropagation();
       const id = tile.children[i].id;
-      ctx.removeChild(tile, i);
+      ctx.removeChildFrom(tile, i);
       names.delete(id);
       content.delete(id);
     }}

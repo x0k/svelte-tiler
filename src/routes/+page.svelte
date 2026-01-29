@@ -63,13 +63,13 @@
   });
 
   class CustomTilerContext extends TilerContext {
-    removeChild(tile: Tile, index: number): void {
+    removeChildFrom(tile: Tile, index: number): void {
       if (tile.id === layout.id) {
         const child = tile.children[index];
         this.definitions[child.type].onClear(this, child as never);
         return;
       }
-      super.removeChild(tile, index);
+      super.removeChildFrom(tile, index);
     }
   }
 
@@ -239,7 +239,7 @@
     class="button"
     onclick={(e) => {
       e.stopPropagation();
-      ctx.removeChild(tile, i);
+      ctx.removeChildFrom(tile, i);
     }}
   >
     <CodiconClose />
@@ -250,7 +250,7 @@
   <button
     class="button"
     onclick={() => {
-      ctx.destroy(tile);
+      ctx.remove(tile);
     }}
   >
     <CodiconCloseAll />

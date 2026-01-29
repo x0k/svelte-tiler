@@ -92,7 +92,7 @@
           tile.children.every((c) => c.id !== droppable.tileId))
       ) {
         tick().then(() => {
-          ctx.replaceWith(tile, tile.children[1 - i]);
+          ctx.replaceWith(tile.id, tile.children[1 - i]);
         });
         return;
       }
@@ -103,7 +103,7 @@
       tile.constraints.splice(i, 1);
       return;
     }
-    ctx.destroy(tile);
+    ctx.remove(tile);
   }
 
   export function onClear(_ctx: TilerContext, _tile: Tiles['split']) {}

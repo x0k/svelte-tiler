@@ -93,7 +93,7 @@
     i: number
   ) {
     if (tile.children.length < 2) {
-      ctx.destroy(tile);
+      ctx.remove(tile);
       return;
     }
     if (tile.selectedTab >= i) {
@@ -279,7 +279,7 @@
       if (reason !== 'drop') {
         return;
       }
-      ctx.removeChild(tile, this.childIndex);
+      ctx.removeChildFrom(tile, this.childIndex);
     }
   }
 
