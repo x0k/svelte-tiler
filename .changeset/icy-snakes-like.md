@@ -2,4 +2,4 @@
 'svelte-tiler': minor
 ---
 
-[BREAKING] Simplify `TilerContext` implementation
+[BREAKING] Refactor `TilerContext` implementation

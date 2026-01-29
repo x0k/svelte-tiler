@@ -2,6 +2,7 @@ import {
   Draggable,
   Droppable,
   type DraggableOptions,
+  type StopEvent,
 } from './shared/dnd.svelte.js';
 import type { Tile } from './model.js';
 import type { TilerContext } from './context.ts';
@@ -15,6 +16,10 @@ export class TileDropTarget<T extends Tile> extends Droppable<Tile, T> {
   ) {
     super(ctx.dnd);
     this.tilerCtx = ctx;
+  }
+
+  protected isOwnChild(d: Draggable): d is TileDragSource {
+    return d instanceof TileDragSource && this.tileId === d.parentTileId;
   }
 }
 
@@ -34,5 +39,12 @@ export class TileDragSource extends Draggable<Tile> {
     this.tilerCtx = ctx;
     this.parentTileId = options.parentTileId;
     this.childIndex = options.childIndex;
+  }
+
+  protected onStop({ reason }: StopEvent): void {
+    if (reason !== 'drop') {
+      return;
+    }
+    this.tilerCtx.removeChildFromTile(this.parentTileId, this.childIndex);
   }
 }

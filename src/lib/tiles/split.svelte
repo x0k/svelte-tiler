@@ -92,7 +92,7 @@
           tile.children.every((c) => c.id !== droppable.tileId))
       ) {
         tick().then(() => {
-          ctx.replaceWith(tile.id, tile.children[1 - i]);
+          ctx.replaceTile(tile.id, tile.children[1 - i]);
         });
         return;
       }
@@ -197,7 +197,7 @@
             : currentPos > resizerRect.top
       ) {
         if (currentDir !== lastDir) {
-          startPos = previousPos;
+          startPos = currentPos;
           this.syncWeights();
           lastDir = currentDir;
         }

@@ -1,6 +1,7 @@
 <script lang="ts" module>
   import { getContext, setContext, type Snippet } from 'svelte';
 
+  import type { Draggable } from '$lib/shared/dnd.svelte.js';
   import type { Registry } from '$lib/shared/registry.js';
   import type { Tile, Tiles } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.js';
@@ -147,7 +148,6 @@
 </script>
 
 <script lang="ts">
-  import { Draggable, type StopEvent } from '$lib/shared/dnd.svelte.js';
   import {
     getRectParts,
     type Direction,
@@ -185,10 +185,10 @@
       return (
         t?.type === 'tabs' &&
         !(
+          this.isOwnChild(d) &&
           t.children.length === 1 &&
           tile.children.length === 1 &&
-          t.children[0].id === tile.children[0].id &&
-          d instanceof DraggableTab
+          t.children[0].id === tile.children[0].id
         )
       );
     }
@@ -237,7 +237,7 @@
         tile.headersDirection !== 'none'
           ? (tile.headersDirection === 'row' ? this.hpart : this.vpart) ===
             'end'
-          : d instanceof DraggableTab && d.childIndex <= i
+          : this.isOwnChild(d) && d.childIndex <= i
       ) {
         i++;
       }
@@ -250,7 +250,7 @@
       const id = tabs.children[0].id;
       if (this.hpart === 'center' && this.vpart === 'center') {
         let i = tile.children.findIndex((t) => t.id === id);
-        if (i < 0 && d instanceof DraggableTab) {
+        if (i < 0 && this.isOwnChild(d)) {
           i = d.childIndex;
         }
         insertTabs(tile, i < 0 ? tile.children.length : i, tabs);
@@ -271,15 +271,6 @@
                   : 1,
         });
       }
-    }
-  }
-
-  class DraggableTab extends TileDragSource {
-    protected onStop({ reason }: StopEvent): void {
-      if (reason !== 'drop') {
-        return;
-      }
-      ctx.removeChildFrom(tile, this.childIndex);
     }
   }
 
@@ -309,7 +300,7 @@
       <div data-tabs-list>
         {#each tile.children as t, i (t.id)}
           {@const droppable = new SegmentedTabDropTarget(ctx, t.id, i)}
-          {@const draggable = new DraggableTab(ctx, {
+          {@const draggable = new TileDragSource(ctx, {
             parentTileId: tile.id,
             childIndex: i,
             data: create({

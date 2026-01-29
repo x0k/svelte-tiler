@@ -41,6 +41,7 @@ export class TilerContext {
 
   registerTile(tile: Tile, parent: Tile | ((tile: Tile) => void)) {
     const id = tile.id;
+    this.tiles.set(id, tile);
     if (typeof parent === 'function') {
       this.updateRootFn = parent;
     } else {
@@ -60,7 +61,7 @@ export class TilerContext {
     return this.definitions[tile.type].default;
   }
 
-  replaceWith(tileId: string, replace: Tile) {
+  replaceTile(tileId: string, replace: Tile) {
     const parent = this.parents.get(tileId);
     if (parent) {
       const index = parent.children.findIndex((c) => c.id === tileId);
