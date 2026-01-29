@@ -19,7 +19,7 @@ export type TileEffects = {
 };
 
 export interface TilerContextOptions {
-  tiles: TileDefinitions;
+  definitions: TileDefinitions;
   parents?: WeakMap<Tile, Tile>;
   dnd?: DndContext<Tile>;
   effects?: TileEffects;
@@ -34,19 +34,20 @@ export class TilerContext {
   readonly dnd: DndContext<Tile>;
 
   constructor(options: TilerContextOptions) {
-    this.definitions = $derived(options.tiles);
-    this.dnd = $derived(options.dnd ?? new DndContext());
-    this.parents = $derived(options.parents ?? new WeakMap());
-    this.effects = $derived(options.effects ?? {});
+    this.definitions = options.definitions;
+    this.dnd = options.dnd ?? new DndContext();
+    // NOTE:
+    this.parents = options.parents ?? new WeakMap();
+    this.effects = options.effects ?? {};
   }
 
-  registerParent(tile: Tile, parent: Tile) {
-    this.parents.set(tile, parent);
-  }
-
-  setUpdateRoot(tile: Tile, update: (tile: Tile) => void) {
-    this.parents.delete(tile);
-    this.updateRootFn = update;
+  registerTile(tile: Tile, parent: Tile | ((tile: Tile) => void)) {
+    if (typeof parent === 'function') {
+      this.parents.delete(tile);
+      this.updateRootFn = parent;
+    } else {
+      this.parents.set(tile, parent);
+    }
   }
 
   getTileEffect(tile: Tile) {
@@ -62,9 +63,7 @@ export class TilerContext {
     if (parent) {
       const index = parent.children.findIndex((c) => c.id === tile.id);
       if (index < 0) {
-        throw new Error(
-          `Invalid parent for ${JSON.stringify($state.snapshot(tile))} tile`
-        );
+        throw new Error(`Invalid parent for "${tile.id}" tile`);
       }
       parent.children[index] = replace;
     } else {
@@ -88,9 +87,7 @@ export class TilerContext {
     }
     const index = parent.children.findIndex((c) => c.id === tile.id);
     if (index < 0) {
-      throw new Error(
-        `Invalid parent for ${JSON.stringify($state.snapshot(tile))} tile`
-      );
+      throw new Error(`Invalid parent for "${tile.id}" tile`);
     }
     this.removeChild(parent, index);
   }

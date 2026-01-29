@@ -75,7 +75,7 @@
 
   const ctx = new CustomTilerContext({
     dnd,
-    tiles: { split: Split, leaf: Leaf, tabs: Tabs },
+    definitions: { split: Split, leaf: Leaf, tabs: Tabs },
     effects: {
       tabs: (tile) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions

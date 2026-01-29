@@ -3,7 +3,7 @@
 
   import type { Registry } from '$lib/shared/registry.js';
   import type { Tile, Tiles } from '$lib/model.js';
-  import type { TilerContext } from '$lib/context.svelte.js';
+  import type { TilerContext } from '$lib/context.js';
 
   export type HeadersDirection = Direction | 'none';
 
@@ -153,7 +153,7 @@
     type Direction,
     type EdgePart,
   } from '$lib/shared/spatial.js';
-  import { getTilerContext } from '$lib/context.svelte.js';
+  import { getTilerContext } from '$lib/context.js';
   import type { TileProps } from '$lib/model.js';
   import { TileDragSource, TileDropTarget } from '$lib/dnd.js';
 

@@ -11,7 +11,7 @@
   import type { Direction } from '$lib/shared/spatial.js';
   import { almostEqual } from '$lib/shared/math.js';
   import type { Tile, TileProps, Tiles } from '$lib/model.js';
-  import type { TilerContext } from '$lib/context.svelte.js';
+  import type { TilerContext } from '$lib/context.js';
   import { TileDropTarget } from '$lib/dnd.js';
 
   declare module '../model.js' {

@@ -1,4 +1,4 @@
-export * from './context.svelte.ts';
+export * from './context.ts';
 export * from './model.ts';
 export * from './dnd.ts';
 

@@ -4,7 +4,7 @@ import {
   type DraggableOptions,
 } from './shared/dnd.svelte.js';
 import type { Tile } from './model.js';
-import type { TilerContext } from './context.svelte.ts';
+import type { TilerContext } from './context.ts';
 
 export class TileDropTarget<T extends Tile> extends Droppable<Tile, T> {
   protected tilerCtx: TilerContext;

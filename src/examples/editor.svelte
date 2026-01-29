@@ -99,7 +99,7 @@
   });
   const ctx = new TilerContext({
     dnd,
-    tiles: { leaf: Leaf, split: Split, tabs: Tabs },
+    definitions: { leaf: Leaf, split: Split, tabs: Tabs },
   });
   setTilerContext(ctx);
 </script>
