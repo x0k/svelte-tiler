@@ -32,6 +32,8 @@
   export function onRemoveChild() {}
 
   export function onClear() {}
+
+  export function onInsert() {}
 </script>
 
 <script lang="ts">

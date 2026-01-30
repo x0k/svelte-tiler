@@ -18,6 +18,10 @@ export class TileDropTarget<T extends Tile> extends Droppable<Tile, T> {
     this.tilerCtx = ctx;
   }
 
+  getTargetTileId(): string | undefined {
+    return this.tileId;
+  }
+
   protected isOwnChild(d: Draggable): d is TileDragSource {
     return d instanceof TileDragSource && this.tileId === d.parentTileId;
   }

@@ -54,34 +54,27 @@
     empty: fromRecord({
       editorIntro,
     }),
-    createSplit({ parent, type, pivot, adjacent, offset }) {
-      if (
-        parent?.type === 'split' &&
-        parent.direction === type &&
-        parent.id !== layout.id
-      ) {
+    applySplit({ parent, type, pivot, adjacent, offset }) {
+      if (parent?.type === 'split' && parent.direction === type) {
         const index =
           parent.children.findIndex((c) => c.id === pivot.id) + offset;
-        Split.insertTile(parent, index, {
-          tile: adjacent,
-          constraints: defaultConstraints,
+        ctx.insertIntoTile(parent.id, 'split', index, {
+          children: [adjacent],
+          constraints: [defaultConstraints],
         });
-        return parent;
+        return;
       }
       const tiles = new Array<Split.SplitTileOptions>(2);
       tiles[1 - offset] = { tile: pivot, constraints: defaultConstraints };
       tiles[offset] = { tile: adjacent, constraints: defaultConstraints };
-      const next = Split.create({
-        direction: type,
-        children: tiles,
-        gapPx: splitGapPx,
-      });
-      if (parent && parent.children.length > 1) {
-        const index = parent.children.findIndex((c) => c.id === pivot.id);
-        parent.children[index] = next;
-        return parent;
-      }
-      return next;
+      ctx.replace(
+        parent && parent.children.length > 1 ? pivot : parent,
+        Split.create({
+          direction: type,
+          children: tiles,
+          gapPx: splitGapPx,
+        })
+      );
     },
   });
   let layout = $state(
@@ -138,7 +131,7 @@
   <button
     class="button"
     onclick={() => {
-      Tabs.insertTabs(tile, tile.children.length, createTitledLeaf());
+      ctx.insertInto<'tabs'>(tile, tile.children.length, createTitledLeaf());
     }}
   >
     <CodiconNewFile />
@@ -149,7 +142,7 @@
   <button
     class="button"
     onclick={() => {
-      Tabs.insertTabs(tile, 0, createTitledLeaf());
+      ctx.insertInto<'tabs'>(tile, 0, createTitledLeaf());
     }}
   >
     <CodiconNewFile />
