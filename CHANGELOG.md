@@ -1,5 +1,19 @@
 # svelte-tiler
 
+## 0.2.0
+
+### Minor Changes
+
+- [#4](https://github.com/x0k/svelte-tiler/pull/4) [`56a4a34`](https://github.com/x0k/svelte-tiler/commit/56a4a34a08f1341649acbc3001677f3a10eedcda) Thanks [@x0k](https://github.com/x0k)! - [BREAKING] Remove `createSplit` tabs option in favor of `applySplit: (options: SplitOptions) => void`.
+
+  Now the function should modify the layout.
+
+- [#4](https://github.com/x0k/svelte-tiler/pull/4) [`56a4a34`](https://github.com/x0k/svelte-tiler/commit/56a4a34a08f1341649acbc3001677f3a10eedcda) Thanks [@x0k](https://github.com/x0k)! - [BREAKING] Introduce `ctx.insertInto` method.
+
+  Now tile also should export `onInsert` function.
+
+- [#4](https://github.com/x0k/svelte-tiler/pull/4) [`56a4a34`](https://github.com/x0k/svelte-tiler/commit/56a4a34a08f1341649acbc3001677f3a10eedcda) Thanks [@x0k](https://github.com/x0k)! - [BREAKING] Remove the `bindable` modifier for the `parent` option of tiles
+
 ## 0.1.0
 
 ### Minor Changes
