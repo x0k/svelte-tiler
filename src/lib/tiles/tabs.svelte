@@ -3,7 +3,11 @@
 
   import type { Draggable } from '$lib/shared/dnd.svelte.js';
   import type { Registry } from '$lib/shared/registry.js';
-  import type { Tile, Tiles } from '$lib/model.js';
+  import {
+    insertWithDeduplication,
+    type Tile,
+    type Tiles,
+  } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.js';
 
   export type HeadersDirection = Direction | 'none';
@@ -18,6 +22,9 @@
         tabHeader?: string;
         empty?: string;
       };
+    }
+    interface TileInsertRequirements {
+      tabs: 'titles';
     }
   }
 
@@ -70,7 +77,7 @@
     E extends string = string,
     A extends string = string,
   > {
-    createSplit?: (options: SplitOptions) => Tile;
+    applySplit?: (options: SplitOptions) => void;
     actions?: Registry<A, Snippet<[Tiles['tabs']]> | undefined>;
     headers?: Registry<
       H,
@@ -112,38 +119,16 @@
     }
   }
 
-  export function insertTabs(
+  export function onInsert(
+    _ctx: TilerContext,
     tile: Tiles['tabs'],
     i: number,
-    {
-      titles,
-      children,
-    }: {
-      titles: string[];
-      children: Tile[];
-    }
+    data: TileInsertData<'tabs'>
   ) {
-    const newIds = new Set(children.map((c) => c.id));
-    let write = 0;
-    let shift = 0;
-    const c = tile.children;
-    const t = tile.titles;
-    const l = t.length;
-    for (let read = 0; read < l; read++) {
-      if (!newIds.has(c[read].id)) {
-        t[write] = t[read];
-        c[write] = c[read];
-        write++;
-      } else if (read < i) {
-        shift++;
-      }
-    }
-    c.length = write;
-    t.length = write;
-    i -= shift;
-    tile.children.splice(i, 0, ...children);
-    tile.titles.splice(i, 0, ...titles);
-    tile.selectedTab = i;
+    tile.selectedTab = insertWithDeduplication<'tabs'>(tile, i, {
+      titles: data.titles,
+      children: data.children,
+    });
   }
 </script>
 
@@ -154,14 +139,10 @@
     type EdgePart,
   } from '$lib/shared/spatial.js';
   import { getTilerContext } from '$lib/context.js';
-  import type { TileProps } from '$lib/model.js';
+  import type { TileInsertData, TileProps } from '$lib/model.js';
   import { TileDragSource, TileDropTarget } from '$lib/dnd.js';
 
-  let {
-    tile = $bindable(),
-    parent = $bindable(),
-    child,
-  }: TileProps<'tabs'> = $props();
+  let { tile = $bindable(), parent, child }: TileProps<'tabs'> = $props();
 
   const ctx = getTilerContext();
   const tabsCtx = getContext<TabsContext | undefined>(TABS_CONTEXT_KEY);
@@ -177,7 +158,7 @@
   const empty = $derived(
     (tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
   );
-  const edgeRatio = $derived(tabsCtx?.createSplit ? 0.1 : 0);
+  const edgeRatio = $derived(tabsCtx?.applySplit ? 0.1 : 0);
 
   class TabsTileDropTarget extends TileDropTarget<Tiles['tabs']> {
     accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
@@ -196,7 +177,7 @@
 
   class SimpleTabsDropTarget extends TabsTileDropTarget {
     protected onDrop(tabs: Tiles['tabs']): void {
-      insertTabs(tile, tile.children.length, tabs);
+      ctx.insertInto<'tabs'>(tile, tile.children.length, tabs);
     }
   }
 
@@ -241,21 +222,29 @@
       ) {
         i++;
       }
-      insertTabs(tile, i, tabs);
+      ctx.insertInto<'tabs'>(tile, i, tabs);
     }
   }
 
   class SegmentedContentDropTarget extends SegmentedTabsTileDropTarget {
+    get isCenter() {
+      return this.hpart === 'center' && this.vpart === 'center';
+    }
+
+    getTargetTileId(): string | undefined {
+      return this.isCenter ? tile.id : parent?.id;
+    }
+
     protected onDrop(tabs: Tiles['tabs'], d: Draggable): void {
       const id = tabs.children[0].id;
-      if (this.hpart === 'center' && this.vpart === 'center') {
+      if (this.isCenter) {
         let i = tile.children.findIndex((t) => t.id === id);
         if (i < 0 && this.isOwnChild(d)) {
           i = d.childIndex;
         }
-        insertTabs(tile, i < 0 ? tile.children.length : i, tabs);
-      } else if (tabsCtx?.createSplit) {
-        parent = tabsCtx.createSplit({
+        ctx.insertInto<'tabs'>(tile, i < 0 ? tile.children.length : i, tabs);
+      } else if (tabsCtx?.applySplit) {
+        tabsCtx.applySplit({
           parent,
           type:
             this.hpart === 'start' || this.hpart === 'end' ? 'row' : 'column',

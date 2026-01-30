@@ -1,6 +1,6 @@
 <script lang="ts">
   import Render from './render.svelte';
-  import type { Tile } from './model.ts';
+  import type { Tile } from './model.js';
 
   let { layout = $bindable() }: { layout: Tile | undefined } = $props();
 </script>

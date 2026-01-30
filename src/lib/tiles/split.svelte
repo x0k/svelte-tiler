@@ -10,7 +10,13 @@
   } from '$lib/shared/constraints.js';
   import type { Direction } from '$lib/shared/spatial.js';
   import { almostEqual } from '$lib/shared/math.js';
-  import type { Tile, TileProps, Tiles } from '$lib/model.js';
+  import {
+    insertWithDeduplication,
+    type Tile,
+    type TileInsertData,
+    type TileProps,
+    type Tiles,
+  } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.js';
   import { TileDropTarget } from '$lib/dnd.js';
 
@@ -89,10 +95,10 @@
       if (
         !droppable ||
         (droppable instanceof TileDropTarget &&
-          tile.children.every((c) => c.id !== droppable.tileId))
+          tile.id !== droppable.getTargetTileId())
       ) {
         tick().then(() => {
-          ctx.replaceTile(tile.id, tile.children[1 - i]);
+          ctx.replace(tile, tile.children[1 - i]);
         });
         return;
       }
@@ -108,14 +114,21 @@
 
   export function onClear(_ctx: TilerContext, _tile: Tiles['split']) {}
 
-  export function insertTile(
-    node: Tiles['split'],
+  export function onInsert(
+    _ctx: TilerContext,
+    tile: Tiles['split'],
     index: number,
-    { tile, constraints = [], weight = 1 }: SplitTileOptions
+    {
+      children,
+      constraints = children.map(() => []),
+      weights = children.map(() => 1),
+    }: TileInsertData<'split'>
   ) {
-    node.children.splice(index, 0, tile);
-    node.constraints.splice(index, 0, constraints);
-    node.weights.splice(index, 0, weight);
+    insertWithDeduplication<'split'>(tile, index, {
+      children,
+      constraints,
+      weights,
+    });
   }
 </script>
 

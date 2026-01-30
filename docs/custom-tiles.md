@@ -19,19 +19,35 @@ declare module 'svelte-tiler' {
 - Use only serializable values if you want the entire layout to be serializable.
   For non-serializable values, define a serializable key that can be used to retrieve the value from context.
 - It is recommended to use a prefix for custom tiles to avoid conflicts with tiles that may be added in the future.
+- If any properties other than `children` are required to implement the insert operation for your tile, specify them in `TileInsertRequirements`. Example:
+
+```ts
+declare module 'svelte-tiler' {
+  interface TileInsertRequirements {
+    tabs: 'titles';
+  }
+}
+```
 
 ## Hooks
 
 In the same section, export two functions:
 
+- `onInsert` is called to insert child elements by index.
 - `onRemoveChild` is called when a child element needs to be removed from your tile.
 - `onClear` is called when the tile cannot be removed (for example, when it is the root tile) and should reset or clean up its state, if applicable.
 
-Together with the component (which uses `export default`), these functions form a `TileDefinition` (see `lib/model.ts` for more details).
+Together with the component (which uses `export default`), these functions form a `TileDefinition` (see `lib/context.ts` for more details).
 
 ```ts
 export interface TileDefinition<T extends TileType> {
   default: TileComponent<T>;
+  onInsert: (
+    ctx: TilerContext,
+    tile: Tiles[T],
+    index: number,
+    data: TileInsertData<T>
+  ) => void;
   onRemoveChild: (ctx: TilerContext, tile: Tiles[T], index: number) => void;
   onClear: (ctx: TilerContext, tile: Tiles[T]) => void;
 }

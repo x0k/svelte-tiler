@@ -2,13 +2,25 @@ import { createContext } from 'svelte';
 
 import { DndContext } from './shared/dnd.svelte.ts';
 
-import type { Tile, TileComponent, Tiles, TileType } from './model.ts';
+import type {
+  Tile,
+  TileComponent,
+  TileInsertData,
+  Tiles,
+  TileType,
+} from './model.js';
 
 export const [getTilerContext, setTilerContext] = createContext<TilerContext>();
 
 export interface TileDefinition<T extends TileType> {
   default: TileComponent<T>;
   onRemoveChild: (ctx: TilerContext, tile: Tiles[T], index: number) => void;
+  onInsert: (
+    ctx: TilerContext,
+    tile: Tiles[T],
+    index: number,
+    data: TileInsertData<T>
+  ) => void;
   onClear: (ctx: TilerContext, tile: Tiles[T]) => void;
 }
 
@@ -28,8 +40,12 @@ export class TilerContext {
   protected definitions: TileDefinitions;
   protected effects: TileEffects;
   protected updateRootFn: ((tile: Tile) => void) | undefined;
-  protected tiles = new Map<string, Tile>();
-  protected parents = new Map<string, Tile>();
+
+  protected registry = new FinalizationRegistry<string>((id) => {
+    this.tiles.delete(id);
+  });
+  protected tiles = new Map<string, WeakRef<Tile>>();
+  protected parents = new WeakMap<Tile, Tile>();
 
   readonly dnd: DndContext<Tile>;
 
@@ -40,17 +56,14 @@ export class TilerContext {
   }
 
   registerTile(tile: Tile, parent: Tile | ((tile: Tile) => void)) {
-    const id = tile.id;
-    this.tiles.set(id, tile);
+    this.tiles.set(tile.id, new WeakRef(tile));
+    this.registry.register(tile, tile.id);
     if (typeof parent === 'function') {
+      this.parents.delete(tile);
       this.updateRootFn = parent;
     } else {
-      this.parents.set(id, parent);
+      this.parents.set(tile, parent);
     }
-    return () => {
-      this.tiles.delete(id);
-      this.parents.delete(id);
-    };
   }
 
   getTileEffect(tile: Tile) {
@@ -61,17 +74,47 @@ export class TilerContext {
     return this.definitions[tile.type].default;
   }
 
-  replaceTile(tileId: string, replace: Tile) {
-    const parent = this.parents.get(tileId);
-    if (parent) {
-      const index = parent.children.findIndex((c) => c.id === tileId);
-      if (index < 0) {
-        throw new Error(`Invalid parent for "${tileId}" tile`);
+  replace(tile: Tile | undefined, replace: Tile) {
+    if (tile) {
+      const parent = this.parents.get(tile);
+      if (parent) {
+        const index = parent.children.findIndex((c) => c.id === tile.id);
+        if (index < 0) {
+          throw new Error(`Invalid parent for "${tile.id}" tile`);
+        }
+        parent.children[index] = replace;
+        return;
       }
-      parent.children[index] = replace;
-    } else {
-      this.updateRootFn?.(replace);
     }
+    this.updateRootFn?.(replace);
+  }
+
+  replaceTile(tileId: string | undefined, replace: Tile) {
+    const tile = tileId && this.getTileById(tileId);
+    this.replace(tile || undefined, replace);
+  }
+
+  insertInto<T extends TileType>(
+    tile: Tiles[T],
+    index: number,
+    data: TileInsertData<T>
+  ) {
+    this.definitions[tile.type].onInsert(this, tile, index, data);
+  }
+
+  insertIntoTile<T extends TileType>(
+    tileId: string,
+    type: T,
+    index: number,
+    data: TileInsertData<T>
+  ) {
+    const tile = this.getTileById(tileId);
+    if (tile.type !== type) {
+      throw new Error(
+        `Tile type mismatch: expected "${type}", but got "${tile.type}"`
+      );
+    }
+    this.insertInto(tile as Tiles[T], index, data);
   }
 
   removeChildFrom(tile: Tile, index: number) {
@@ -83,7 +126,7 @@ export class TilerContext {
   }
 
   remove(tile: Tile) {
-    const parent = this.parents.get(tile.id);
+    const parent = this.parents.get(tile);
     if (parent === undefined) {
       this.definitions[tile.type].onClear(this, tile as never);
       return;
@@ -100,7 +143,7 @@ export class TilerContext {
   }
 
   protected getTileById(tileId: string) {
-    const tile = this.tiles.get(tileId);
+    const tile = this.tiles.get(tileId)?.deref();
     if (tile === undefined) {
       throw new Error(`Unable to find tile with "${tileId}" id`);
     }

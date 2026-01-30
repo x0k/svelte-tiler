@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getTilerContext } from './context.js';
-  import type { Tile } from './model.ts';
+  import type { Tile } from './model.js';
   import Self from './render.svelte';
 
   let {
@@ -23,7 +23,7 @@
 </script>
 
 {#snippet child(index: number)}
-  <Self bind:parent={tile} bind:tile={tile.children[index]} {index} />
+  <Self parent={tile} bind:tile={tile.children[index]} {index} />
 {/snippet}
 
-<TileComponent bind:parent bind:tile={tile as never} {index} {child} />
+<TileComponent {parent} bind:tile={tile as never} {index} {child} />
