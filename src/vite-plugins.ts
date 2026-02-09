@@ -78,6 +78,43 @@ export function shikiImport(): Plugin {
   };
 }
 
+export function exampleImport(): Plugin {
+  const virtualModulePrefix = '\0example:';
+  return {
+    name: 'vite-plugin-example-import',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source.startsWith(virtualModulePrefix)) {
+        return source;
+      }
+      if (source.endsWith('?example')) {
+        const [sourcePath] = source.split('?');
+        if (
+          importer &&
+          (sourcePath.startsWith('./') || sourcePath.startsWith('../'))
+        ) {
+          source = path.resolve(path.dirname(importer), sourcePath);
+        }
+        return `${virtualModulePrefix}${source}.example.js`;
+      }
+      return null;
+    },
+    async load(id) {
+      if (!id.startsWith(virtualModulePrefix)) {
+        return null;
+      }
+      const filePath = id.slice(virtualModulePrefix.length, -11);
+      try {
+        const content = await readFile(filePath, 'utf-8');
+        const fixed = fixImportsAndStyles(content);
+        return `export default ${JSON.stringify(fixed)};`;
+      } catch (error) {
+        this.error(`Failed to fix example file: ${filePath}\n${error}`);
+      }
+    },
+  };
+}
+
 export function markedImport(): Plugin {
   return {
     name: 'vite-plugin-marked-import',

@@ -1,7 +1,9 @@
 <script lang="ts">
+  import type { Component } from 'svelte';
   import CodiconClose from '~icons/codicon/close';
   import CodiconCloseAll from '~icons/codicon/close-all';
   import MaterialIconThemeSvelte from '~icons/material-icon-theme/svelte';
+  import CodiconLinkExternal from '~icons/codicon/link-external';
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
@@ -31,7 +33,7 @@
   import Sidebar from './components/sidebar.svelte';
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
-  import type { Component } from 'svelte';
+  import { createReplLink } from './repl.ts';
 
   const files = Object.assign(
     import.meta.glob(['./docs/*', './*.md'], {
@@ -55,6 +57,11 @@
     base: '../',
     import: 'default',
   }) as Record<string, () => Promise<Component>>;
+  const exampleContents = import.meta.glob('./examples/*', {
+    base: '../',
+    import: 'default',
+    query: '?example',
+  }) as Record<string, () => Promise<string>>;
 
   let activeTabs: Tiles['tabs'];
   let portalEl: HTMLDivElement;
@@ -91,21 +98,23 @@
     { type: 'minSize', unit: 'weight', value: 0.2 },
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
+  function isExamplePath(path: string) {
+    return path.startsWith('./examples') && getFileExtension(path) === 'svelte';
+  }
   function createFileLeaf(path: string) {
-    const leaf =
-      path.startsWith('./examples/') && getFileExtension(path) === 'svelte'
-        ? Split.create({
-            gapPx: 1,
-            children: [
-              {
-                tile: createLeaf(path),
-              },
-              {
-                tile: createLeaf(`example:${path}`),
-              },
-            ],
-          })
-        : createLeaf(path);
+    const leaf = isExamplePath(path)
+      ? Split.create({
+          gapPx: 1,
+          children: [
+            {
+              tile: createLeaf(path),
+            },
+            {
+              tile: createLeaf(`example:${path}`),
+            },
+          ],
+        })
+      : createLeaf(path);
     leaf.id = path;
     return leaf;
   }
@@ -244,6 +253,23 @@
 {/snippet}
 
 {#snippet actions(tile: Tiles['tabs'])}
+  {@const selected: Tile | undefined = $state.snapshot(tile.children[tile.selectedTab])}
+  {#if selected && isExamplePath(selected.id)}
+    <button
+      class="button"
+      onclick={async () => {
+        console.log($state.snapshot(selected));
+        const titleStart = selected.id.lastIndexOf('/');
+        const link = await createReplLink(
+          selected.id.slice(titleStart + 1, -7),
+          await exampleContents[selected.id]()
+        );
+        window.open(link, '_blank');
+      }}
+    >
+      <CodiconLinkExternal />
+    </button>
+  {/if}
   <button
     class="button"
     onclick={() => {

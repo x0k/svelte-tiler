@@ -4,7 +4,11 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import Icons from 'unplugin-icons/vite';
 
-import { markedImport, shikiImport } from './src/vite-plugins.js';
+import {
+  markedImport,
+  shikiImport,
+  exampleImport,
+} from './src/vite-plugins.js';
 
 export default defineConfig({
   assetsInclude: ['**/*.md'],
@@ -14,6 +18,7 @@ export default defineConfig({
     Icons({ compiler: 'svelte' }),
     markedImport(),
     shikiImport(),
+    exampleImport(),
   ],
 
   server: {

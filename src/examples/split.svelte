@@ -47,7 +47,9 @@
   :global .example .split {
     --color-bg: #f8f8f2;
     --color-success: #a6e22e;
+    --color-text: #1e1f1c;
 
+    color: var(--color-text);
     height: 200px;
 
     [data-split] {

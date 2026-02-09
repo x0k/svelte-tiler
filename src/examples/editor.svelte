@@ -1,10 +1,6 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
 
-  import CodiconTrash from '~icons/codicon/trash';
-  import CodiconNewFile from '~icons/codicon/new-file';
-  import CodiconGripper from '~icons/codicon/gripper';
-
   import type { Constraint } from '$lib/shared/constraints.js';
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import {
@@ -101,8 +97,48 @@
   <Panel bind:layout />
 </div>
 
+{#snippet trashIcon()}
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    ><path
+      fill="currentColor"
+      d="M14 2h-4c0-1.103-.897-2-2-2S6 .897 6 2H2a.5.5 0 0 0 0 1h.54l.809 9.708A2.513 2.513 0 0 0 5.84 15h4.319a2.514 2.514 0 0 0 2.491-2.292L13.459 3h.54a.5.5 0 0 0 0-1zM8 1c.551 0 1 .449 1 1H7c0-.551.449-1 1-1m3.655 11.625A1.51 1.51 0 0 1 10.16 14H5.841a1.51 1.51 0 0 1-1.495-1.375L3.544 3h8.914l-.802 9.625zM7 5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 1 0m3 0v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 1 0"
+    /></svg
+  >
+{/snippet}
+
+{#snippet newFileIcon()}
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    ><path
+      fill="currentColor"
+      d="M5 14a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3v2.5A1.5 1.5 0 0 0 9.5 6H12v.025q.516.048 1 .188v-.799c0-.398-.158-.779-.439-1.061L9.647 1.439A1.5 1.5 0 0 0 8.586 1H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2.261a5.6 5.6 0 0 1-.654-1zM9 2.207L11.793 5H9.5a.5.5 0 0 1-.5-.5zM11.5 7a4.5 4.5 0 1 0 0 9a4.5 4.5 0 0 0 0-9m2.5 5h-2v2a.5.5 0 0 1-1 0v-2H9a.5.5 0 0 1 0-1h2V9a.5.5 0 0 1 1 0v2h2a.5.5 0 0 1 0 1"
+    /></svg
+  >
+{/snippet}
+
+{#snippet gripperIcon(d: Draggable<Tile>)}
+  <svg
+    {@attach d.registerHandel}
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    ><path
+      fill="currentColor"
+      d="M7 4a1 1 0 1 1-2 0a1 1 0 0 1 2 0m3-1a1 1 0 1 0 0 2a1 1 0 0 0 0-2M6 7a1 1 0 1 0 0 2a1 1 0 0 0 0-2m4 0a1 1 0 1 0 0 2a1 1 0 0 0 0-2m-4 4a1 1 0 1 0 0 2a1 1 0 0 0 0-2m4 0a1 1 0 1 0 0 2a1 1 0 0 0 0-2"
+    /></svg
+  >
+{/snippet}
+
 {#snippet editorHeader(tile: Tiles['tabs'], i: number, d: Draggable<Tile>)}
-  <CodiconGripper {@attach d.registerHandel} />
+  {@render gripperIcon(d)}
   <span
     bind:textContent={
       () => tile.titles[i],
@@ -123,7 +159,7 @@
       content.delete(id);
     }}
   >
-    <CodiconTrash />
+    {@render trashIcon()}
   </button>
 {/snippet}
 
@@ -134,7 +170,7 @@
       ctx.insertInto<'tabs'>(tile, tile.children.length, createTitledLeaf());
     }}
   >
-    <CodiconNewFile />
+    {@render newFileIcon()}
   </button>
 {/snippet}
 
@@ -145,7 +181,7 @@
       ctx.insertInto<'tabs'>(tile, 0, createTitledLeaf());
     }}
   >
-    <CodiconNewFile />
+    {@render newFileIcon()}
     New file
   </button>
 {/snippet}
@@ -163,6 +199,7 @@
     --color-border: #272822;
     --color-success: #a6e22e;
 
+    color: var(--color-border);
     height: 500px;
 
     button {
