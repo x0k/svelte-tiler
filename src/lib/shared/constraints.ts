@@ -1,6 +1,6 @@
 export type ConstraintUnit = 'px' | 'weight' | '%';
 
-export type ConstraintType = 'maxSize' | 'minSize';
+export type ConstraintType = 'maxSize' | 'minSize' | 'collapsedSize';
 
 export interface Constraint {
   type: ConstraintType;
@@ -33,6 +33,7 @@ const CONSTRAINT_COMBINATOR: Record<
 > = {
   maxSize: Math.min,
   minSize: Math.max,
+  collapsedSize: Math.max,
 };
 
 // TODO: Handle 0 total sizes
@@ -40,6 +41,7 @@ export function normalize(options: NormalizeOptions): NormalizedConstraints {
   const result: NormalizedConstraints = {
     maxSize: Infinity,
     minSize: 0,
+    collapsedSize: -1,
   };
   const targetTotal = options[UNIT_TO_TOTAL_SIZE[options.targetUnit]];
   for (const constraint of options.constraints) {
