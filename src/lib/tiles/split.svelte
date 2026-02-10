@@ -149,7 +149,6 @@
   const isRow = $derived(tile.direction === 'row');
   let currentDir = 0;
   let lastDir = 0;
-  let startPos = 0;
   let previousPos = 0;
   let containerSize = 0;
   let remaining = 0;
@@ -157,7 +156,6 @@
   let len = 0;
   let constraints: NormalizedConstraints[] = [];
 
-  let lastWeights: number[] = [];
   let nextLayout: number[] = [];
 
   class DraggableResizer extends Draggable {
@@ -172,11 +170,10 @@
       resizerEl = el;
       currentDir = 0;
       lastDir = 0;
-      startPos = isRow ? e.pageX : e.pageY;
-      previousPos = startPos;
-      this.syncWeights();
+      previousPos = isRow ? e.pageX : e.pageY;
+      nextLayout = $state.snapshot(tile.weights);
       remaining = 0;
-      totalWeight = tile.weights.reduce((a, b) => a + b);
+      totalWeight = this.nextTotal;
       len = tile.weights.length;
 
       containerSize =
@@ -209,13 +206,8 @@
             ? currentPos < resizerRect.bottom
             : currentPos > resizerRect.top
       ) {
-        if (currentDir !== lastDir) {
-          startPos = currentPos;
-          this.syncWeights();
-          lastDir = currentDir;
-        }
         const deltaWeight = Math.abs(
-          ((currentPos - startPos) * totalWeight) / containerSize
+          ((currentPos - previousPos) * totalWeight) / containerSize
         );
         if (deltaWeight > 0) {
           remaining = deltaWeight;
@@ -225,8 +217,7 @@
             currentDir *= -1;
             this.adjustBy('expand');
           }
-          const total = nextLayout.reduce((a, b) => a + b);
-          if (almostEqual(totalWeight, total)) {
+          if (almostEqual(totalWeight, this.nextTotal)) {
             for (let j = 0; j < len; j++) {
               tile.weights[j] = nextLayout[j];
             }
@@ -242,8 +233,16 @@
       }
     }
 
+    private get nextTotal() {
+      let s = 0;
+      for (let i = 0; i < nextLayout.length; i++) {
+        s += nextLayout[i];
+      }
+      return s;
+    }
+
     private expand(j: number) {
-      const weight = lastWeights[j];
+      const weight = tile.weights[j];
       const maxWeight = constraints[j].maxSize;
       if (weight < maxWeight) {
         const available = maxWeight - weight;
@@ -259,7 +258,7 @@
 
     private shrink(j: number) {
       const minWeight = constraints[j].minSize;
-      const weight = lastWeights[j];
+      const weight = tile.weights[j];
       if (weight > minWeight) {
         const available = weight - minWeight;
         if (available < remaining) {
@@ -284,11 +283,6 @@
           this[adjust](j++);
         }
       }
-    }
-
-    private syncWeights() {
-      lastWeights = $state.snapshot(tile.weights);
-      nextLayout = lastWeights.slice();
     }
   }
 </script>
