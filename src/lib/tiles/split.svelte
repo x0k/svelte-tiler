@@ -148,7 +148,6 @@
 
   const isRow = $derived(tile.direction === 'row');
   let posDiff = 0;
-  let lastDir = 0;
   let containerSize = 0;
   let remaining = 0;
   let totalWeight = 0;
@@ -221,7 +220,6 @@
     protected onStart(_: PointerEvent, el: HTMLElement): void {
       resizerEl = el;
       posDiff = 0;
-      lastDir = 0;
       nextLayout = $state.snapshot(tile.weights);
       totalWeight = getNextLayoutTotalWidth();
       remaining = 0;
