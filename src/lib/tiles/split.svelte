@@ -1,5 +1,11 @@
 <script lang="ts" module>
-  import { getContext, setContext, tick, type Snippet } from 'svelte';
+  import {
+    createContext,
+    getContext,
+    setContext,
+    tick,
+    type Snippet,
+  } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -130,6 +136,14 @@
       weights,
     });
   }
+
+  const [getSplitContext, setSplitContext] = createContext<{
+    isCollapsed: (index: number) => boolean;
+    collapse: (index: number) => boolean;
+    expand: (index: number) => boolean;
+  }>();
+
+  export { getSplitContext };
 </script>
 
 <script lang="ts">
@@ -295,6 +309,29 @@
       }
     }
   }
+
+  setSplitContext({
+    isCollapsed(index) {
+      nextLayout = tile.weights;
+      const constraints = normalize({
+        constraints: tile.constraints[index],
+        targetUnit: 'weight',
+        totalSizePercent: 100,
+        totalWeight: getNextLayoutTotalWidth(),
+        totalSizePx:
+          (isRow ? splitEl.clientWidth : splitEl.clientHeight) -
+          (len - 1) * tile.gapPx,
+      });
+      return tile.weights[index] <= constraints.collapsedSize;
+    },
+    collapse(index) {
+      const l = tile.weights.length;
+      return false;
+    },
+    expand(_index) {
+      return false;
+    },
+  });
 </script>
 
 <div
