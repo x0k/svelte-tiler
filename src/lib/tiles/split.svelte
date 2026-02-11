@@ -162,7 +162,7 @@
 
   const isRow = $derived(tile.direction === 'row');
   let posDiff = 0;
-  let containerSize = 0;
+  let totalSizePx = 0;
   let remaining = 0;
   let totalWeight = 0;
   let len = 0;
@@ -170,12 +170,25 @@
 
   let nextLayout: number[] = [];
 
-  function getNextLayoutTotalWidth() {
+  function applyNextLayout() {
+    for (let j = 0; j < len; j++) {
+      tile.weights[j] = nextLayout[j];
+    }
+  }
+
+  function sumOf(arr: number[]) {
     let s = 0;
-    for (let i = 0; i < nextLayout.length; i++) {
-      s += nextLayout[i];
+    for (let i = 0; i < arr.length; i++) {
+      s += arr[i];
     }
     return s;
+  }
+
+  function getContainerSizePx() {
+    return (
+      (isRow ? splitEl.clientWidth : splitEl.clientHeight) -
+      (len - 1) * tile.gapPx
+    );
   }
 
   function expand(weight: number, j: number) {
@@ -223,6 +236,16 @@
     }
   }
 
+  function normalizeConstraints(constraints: Constraint[]) {
+    return normalize({
+      constraints,
+      targetUnit: 'weight',
+      totalSizePercent: 100,
+      totalSizePx,
+      totalWeight,
+    });
+  }
+
   class DraggableResizer extends Draggable {
     #index = 0;
 
@@ -233,24 +256,11 @@
 
     protected onStart(_: PointerEvent, el: HTMLElement): void {
       resizerEl = el;
-      posDiff = 0;
+      totalSizePx = getContainerSizePx();
       nextLayout = $state.snapshot(tile.weights);
-      totalWeight = getNextLayoutTotalWidth();
-      remaining = 0;
-      len = tile.weights.length;
-
-      containerSize =
-        (isRow ? splitEl.clientWidth : splitEl.clientHeight) -
-        (len - 1) * tile.gapPx;
-      constraints = tile.constraints.map((constraints) =>
-        normalize({
-          constraints,
-          targetUnit: 'weight',
-          totalSizePercent: 100,
-          totalSizePx: containerSize,
-          totalWeight: totalWeight,
-        })
-      );
+      totalWeight = sumOf(nextLayout);
+      len = nextLayout.length;
+      constraints = tile.constraints.map(normalizeConstraints);
     }
 
     protected onMove(e: PointerEvent) {
@@ -264,7 +274,7 @@
         return;
       }
 
-      const deltaWeight = Math.abs((posDiff * totalWeight) / containerSize);
+      const deltaWeight = Math.abs((posDiff * totalWeight) / totalSizePx);
       if (deltaWeight > 0) {
         remaining = deltaWeight;
         this.adjustBy(shrink);
@@ -275,13 +285,11 @@
         }
         if (remaining < 0) {
           posDiff *= -1;
-          remaining = Math.abs(totalWeight - getNextLayoutTotalWidth());
+          remaining = Math.abs(totalWeight - sumOf(nextLayout));
           this.adjustBy(shrink, nextLayout);
         }
-        if (almostEqual(totalWeight, getNextLayoutTotalWidth())) {
-          for (let j = 0; j < len; j++) {
-            tile.weights[j] = nextLayout[j];
-          }
+        if (almostEqual(totalWeight, sumOf(nextLayout))) {
+          applyNextLayout();
         }
       }
     }
@@ -310,25 +318,95 @@
     }
   }
 
+  // TODO: Implement the ability to collapse/expand
+  function redistribute(
+    indexes: number[],
+    changedIndex: number,
+    delta: number
+  ) {
+    let remaining = Math.abs(delta);
+    const isGrow = delta > 0;
+
+    let candidateIndexes = indexes.filter(
+      (i) =>
+        i !== changedIndex &&
+        (isGrow
+          ? nextLayout[i] < constraints[i].maxSize
+          : nextLayout[i] > constraints[i].minSize)
+    );
+
+    while (remaining > 0 && candidateIndexes.length > 0) {
+      const totalWeight = sumOf(candidateIndexes.map((i) => nextLayout[i]));
+      let consumed = 0;
+
+      for (const candidateIndex of candidateIndexes) {
+        const share = remaining * (nextLayout[candidateIndex] / totalWeight);
+
+        const capacity = isGrow
+          ? constraints[candidateIndex].maxSize - nextLayout[candidateIndex]
+          : nextLayout[candidateIndex] - constraints[candidateIndex].minSize;
+
+        const applied = Math.min(share, capacity);
+
+        nextLayout[candidateIndex] += isGrow ? applied : -applied;
+        consumed += applied;
+      }
+
+      remaining -= consumed;
+
+      candidateIndexes = candidateIndexes.filter((p) =>
+        isGrow
+          ? nextLayout[p] < constraints[p].maxSize
+          : nextLayout[p] > constraints[p].minSize
+      );
+    }
+
+    return remaining;
+  }
+
   setSplitContext({
     isCollapsed(index) {
-      nextLayout = tile.weights;
-      const constraints = normalize({
-        constraints: tile.constraints[index],
-        targetUnit: 'weight',
-        totalSizePercent: 100,
-        totalWeight: getNextLayoutTotalWidth(),
-        totalSizePx:
-          (isRow ? splitEl.clientWidth : splitEl.clientHeight) -
-          (len - 1) * tile.gapPx,
-      });
+      totalWeight = sumOf(tile.weights);
+      totalSizePx = getContainerSizePx();
+      const constraints = normalizeConstraints(tile.constraints[index]);
       return tile.weights[index] <= constraints.collapsedSize;
     },
     collapse(index) {
-      const l = tile.weights.length;
+      nextLayout = $state.snapshot(tile.weights);
+      totalWeight = sumOf(nextLayout);
+      len = nextLayout.length;
+      totalSizePx = getContainerSizePx();
+      constraints = tile.constraints.map(normalizeConstraints);
+      const rem = redistribute(
+        nextLayout.map((_, i) => i),
+        index,
+        nextLayout[index] - constraints[index].collapsedSize
+      );
+      nextLayout[index] = constraints[index].collapsedSize;
+      if (rem > 0) {
+        return false;
+      }
+      applyNextLayout();
       return false;
     },
-    expand(_index) {
+    expand(index) {
+      nextLayout = $state.snapshot(tile.weights);
+      totalWeight = sumOf(nextLayout);
+      len = nextLayout.length;
+      totalSizePx = getContainerSizePx();
+      constraints = tile.constraints.map(normalizeConstraints);
+      const rem = redistribute(
+        nextLayout.map((_, i) => i),
+        index,
+        // TODO: Restore last weight
+        constraints[index].collapsedSize - constraints[index].minSize
+      );
+      nextLayout[index] = constraints[index].minSize;
+      console.log(nextLayout, rem)
+      if (rem > 0) {
+        return false;
+      }
+      applyNextLayout();
       return false;
     },
   });

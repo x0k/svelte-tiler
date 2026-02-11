@@ -290,11 +290,17 @@
 {/snippet}
 
 {#snippet leaf(tile: Tiles['leaf'])}
+  {@const ctx = Split.getSplitContext()}
   {#if tile.name === 'sidebar'}
     <Sidebar>
       {#each tree as node (node.id)}
         <ExplorerNode {node} {createDraggable} {onFileClick} />
       {/each}
+      <button
+        onclick={() => {
+          ctx.collapse(0);
+        }}>collapse</button
+      >
     </Sidebar>
   {:else if tile.name.startsWith('example:')}
     <div class="example">
@@ -306,6 +312,16 @@
     <div
       class={getFileExtension(tile.name) === 'md' ? 'content' : 'code-preview'}
     >
+      <button
+        onclick={() => {
+          ctx.expand(0);
+        }}>expand</button
+      >
+      <button
+        onclick={() => {
+          console.log(ctx.isCollapsed(0));
+        }}>check</button
+      >
       {#await files[tile.name]() then content}
         {@html content}
       {/await}
