@@ -1,5 +1,11 @@
 <script lang="ts" module>
-  import { getContext, setContext, tick, type Snippet } from 'svelte';
+  import {
+    flushSync,
+    getContext,
+    setContext,
+    tick,
+    type Snippet,
+  } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -149,7 +155,6 @@
   const isRow = $derived(tile.direction === 'row');
   let posDiff = 0;
   let lastDir = 0;
-  let previousPos = 0;
   let lastPos = 0;
   let containerSize = 0;
   let remaining = 0;
@@ -227,6 +232,21 @@
     }
   }
 
+  function getElementPosition(el: HTMLElement) {
+    const rect = el.getBoundingClientRect();
+    let pos = rect.x;
+    let size = rect.width;
+    if (!isRow) {
+      pos = rect.y;
+      size = rect.height;
+    }
+    return pos + size / 2;
+  }
+
+  function setLastPos() {
+    lastPos = getElementPosition(resizerEl);
+  }
+
   class DraggableResizer extends Draggable {
     #index = 0;
 
@@ -235,12 +255,11 @@
       this.#index = index;
     }
 
-    protected onStart(e: PointerEvent, el: HTMLElement): void {
+    protected onStart(_: PointerEvent, el: HTMLElement): void {
       resizerEl = el;
       posDiff = 0;
       lastDir = 0;
-      previousPos = isRow ? e.pageX : e.pageY;
-      lastPos = previousPos;
+      lastPos = getElementPosition(el);
       nextLayout = $state.snapshot(tile.weights);
       setTotalWeight();
       remaining = 0;
@@ -267,39 +286,25 @@
         return;
       }
 
-      nextLayout = $state.snapshot(tile.weights);
-
-      const resizerRect = resizerEl.getBoundingClientRect();
-      if (
-        isRow
-          ? posDiff < 0
-            ? currentPos < resizerRect.right
-            : currentPos > resizerRect.left
-          : posDiff < 0
-            ? currentPos < resizerRect.bottom
-            : currentPos > resizerRect.top
-      ) {
-        const deltaWeight = Math.abs((posDiff * totalWeight) / containerSize);
-        if (deltaWeight > 0) {
-          remaining = deltaWeight;
-          this.adjustBy(shrink);
-          remaining = deltaWeight - remaining;
-          if (remaining > 0) {
-            posDiff *= -1;
-            this.adjustBy(expand);
+      const deltaWeight = Math.abs((posDiff * totalWeight) / containerSize);
+      if (deltaWeight > 0) {
+        remaining = deltaWeight;
+        this.adjustBy(shrink);
+        remaining = deltaWeight - remaining;
+        if (remaining > 0) {
+          posDiff *= -1;
+          this.adjustBy(expand);
+        }
+        if (remaining < 0 || isValid()) {
+          for (let j = 0; j < len; j++) {
+            tile.weights[j] = nextLayout[j];
           }
-          if (remaining < 0 || isValid()) {
-            for (let j = 0; j < len; j++) {
-              tile.weights[j] = nextLayout[j];
-            }
-            lastPos = currentPos;
-            if (remaining < 0) {
-              setTotalWeight();
-            }
+          if (remaining < 0) {
+            setTotalWeight();
           }
+          flushSync(setLastPos);
         }
       }
-      previousPos = currentPos;
     }
 
     protected onStop() {
