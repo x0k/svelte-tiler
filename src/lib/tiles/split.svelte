@@ -1,11 +1,5 @@
 <script lang="ts" module>
-  import {
-    flushSync,
-    getContext,
-    setContext,
-    tick,
-    type Snippet,
-  } from 'svelte';
+  import { getContext, setContext, tick, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -155,41 +149,28 @@
   const isRow = $derived(tile.direction === 'row');
   let posDiff = 0;
   let lastDir = 0;
-  let lastPos = 0;
   let containerSize = 0;
   let remaining = 0;
   let totalWeight = 0;
   let len = 0;
   let constraints: NormalizedConstraints[] = [];
 
+  let currentLayout: number[] = tile.weights;
   let nextLayout: number[] = [];
 
-  function setTotalWeight() {
+  function getNextLayoutTotalWidth() {
     let s = 0;
     for (let i = 0; i < nextLayout.length; i++) {
       s += nextLayout[i];
     }
-    totalWeight = s;
-  }
-
-  function isValid() {
-    let s = 0;
-    let eq = true;
-    for (let i = 0; i < nextLayout.length; i++) {
-      eq &&= almostEqual(nextLayout[i], tile.weights[i]);
-      s += nextLayout[i];
-    }
-    return !eq && almostEqual(s, totalWeight);
+    return s;
   }
 
   function expand(j: number) {
-    let weight = tile.weights[j];
+    let weight = currentLayout[j];
     const { maxSize, minSize, collapsedSize } = constraints[j];
-    if (weight < minSize) {
-      const snapThreshold =
-        collapsedSize >= 0
-          ? collapsedSize + (minSize - collapsedSize) * 0.5
-          : minSize * 0.5;
+    if (collapsedSize >= 0 && weight < minSize) {
+      const snapThreshold = collapsedSize + (minSize - collapsedSize) * 0.5;
       if (snapThreshold < weight + remaining) {
         nextLayout[j] = minSize;
         remaining -= minSize - weight;
@@ -212,7 +193,7 @@
 
   function shrink(j: number) {
     const { minSize, collapsedSize } = constraints[j];
-    const weight = tile.weights[j];
+    const weight = currentLayout[j];
     if (weight > minSize) {
       const available = weight - minSize;
       if (available < remaining) {
@@ -243,10 +224,6 @@
     return pos + size / 2;
   }
 
-  function setLastPos() {
-    lastPos = getElementPosition(resizerEl);
-  }
-
   class DraggableResizer extends Draggable {
     #index = 0;
 
@@ -259,9 +236,8 @@
       resizerEl = el;
       posDiff = 0;
       lastDir = 0;
-      lastPos = getElementPosition(el);
       nextLayout = $state.snapshot(tile.weights);
-      setTotalWeight();
+      totalWeight = getNextLayoutTotalWidth();
       remaining = 0;
       len = tile.weights.length;
 
@@ -281,8 +257,9 @@
 
     protected onMove(e: PointerEvent) {
       const currentPos = isRow ? e.pageX : e.pageY;
+      const lastPos = getElementPosition(resizerEl);
       posDiff = currentPos - lastPos;
-      if (posDiff === 0) {
+      if (almostEqual(posDiff, 0)) {
         return;
       }
 
@@ -295,14 +272,17 @@
           posDiff *= -1;
           this.adjustBy(expand);
         }
-        if (remaining < 0 || isValid()) {
+        if (remaining < 0) {
+          posDiff *= -1;
+          currentLayout = nextLayout;
+          remaining = Math.abs(totalWeight - getNextLayoutTotalWidth());
+          this.adjustBy(shrink);
+          currentLayout = tile.weights;
+        }
+        if (almostEqual(totalWeight, getNextLayoutTotalWidth())) {
           for (let j = 0; j < len; j++) {
             tile.weights[j] = nextLayout[j];
           }
-          if (remaining < 0) {
-            setTotalWeight();
-          }
-          flushSync(setLastPos);
         }
       }
     }
