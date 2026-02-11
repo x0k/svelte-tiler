@@ -155,7 +155,6 @@
   let len = 0;
   let constraints: NormalizedConstraints[] = [];
 
-  let currentLayout: number[] = tile.weights;
   let nextLayout: number[] = [];
 
   function getNextLayoutTotalWidth() {
@@ -166,8 +165,7 @@
     return s;
   }
 
-  function expand(j: number) {
-    let weight = currentLayout[j];
+  function expand(weight: number, j: number) {
     const { maxSize, minSize, collapsedSize } = constraints[j];
     if (collapsedSize >= 0 && weight < minSize) {
       const snapThreshold = collapsedSize + (minSize - collapsedSize) * 0.5;
@@ -191,9 +189,8 @@
     }
   }
 
-  function shrink(j: number) {
+  function shrink(weight: number, j: number) {
     const { minSize, collapsedSize } = constraints[j];
-    const weight = currentLayout[j];
     if (weight > minSize) {
       const available = weight - minSize;
       if (available < remaining) {
@@ -211,17 +208,6 @@
         nextLayout[j] = collapsedSize;
       }
     }
-  }
-
-  function getElementPosition(el: HTMLElement) {
-    const rect = el.getBoundingClientRect();
-    let pos = rect.x;
-    let size = rect.width;
-    if (!isRow) {
-      pos = rect.y;
-      size = rect.height;
-    }
-    return pos + size / 2;
   }
 
   class DraggableResizer extends Draggable {
@@ -257,7 +243,10 @@
 
     protected onMove(e: PointerEvent) {
       const currentPos = isRow ? e.pageX : e.pageY;
-      const lastPos = getElementPosition(resizerEl);
+      const rect = resizerEl.getBoundingClientRect();
+      const lastPos = isRow
+        ? rect.x + rect.width / 2
+        : rect.y + rect.height / 2;
       posDiff = currentPos - lastPos;
       if (almostEqual(posDiff, 0)) {
         return;
@@ -274,10 +263,8 @@
         }
         if (remaining < 0) {
           posDiff *= -1;
-          currentLayout = nextLayout;
           remaining = Math.abs(totalWeight - getNextLayoutTotalWidth());
-          this.adjustBy(shrink);
-          currentLayout = tile.weights;
+          this.adjustBy(shrink, nextLayout);
         }
         if (almostEqual(totalWeight, getNextLayoutTotalWidth())) {
           for (let j = 0; j < len; j++) {
@@ -293,16 +280,19 @@
       }
     }
 
-    private adjustBy(adjust: (index: number) => void) {
+    private adjustBy(
+      adjust: (weight: number, index: number) => void,
+      layout = tile.weights
+    ) {
       if (posDiff < 0) {
         let j = this.#index - 1;
         while (j >= 0 && remaining > 0) {
-          adjust(j--);
+          adjust(layout[j], j--);
         }
       } else {
         let j = this.#index;
         while (j < len && remaining > 0) {
-          adjust(j++);
+          adjust(layout[j], j++);
         }
       }
     }
