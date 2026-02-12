@@ -18,6 +18,8 @@
         titles: string[];
         selectedTab: number;
         headersDirection: HeadersDirection;
+        // TODO: Make required in v1
+        edgeRatio?: number;
         actions?: string;
         tabHeader?: string;
         empty?: string;
@@ -36,11 +38,14 @@
     tabs: [string, Tile][];
     /** @default "none" */
     headersDirection?: HeadersDirection;
+    edgeRatio?: number;
     selectedTab?: number;
     actions?: A;
     tabHeader?: H;
     empty?: E;
   }
+
+  export const DEFAULT_EDGE_RATIO = 0.1;
 
   export function create<H extends string, E extends string, A extends string>(
     options: TabsOptions<H, E, A>
@@ -56,6 +61,7 @@
       type: 'tabs',
       children,
       titles,
+      edgeRatio: options.edgeRatio ?? DEFAULT_EDGE_RATIO,
       headersDirection: options.headersDirection ?? 'none',
       selectedTab: options.selectedTab ?? 0,
       actions: options.actions,
@@ -158,7 +164,9 @@
   const empty = $derived(
     (tile.empty !== undefined && tabsCtx?.empty?.get(tile.empty)) || undefined
   );
-  const edgeRatio = $derived(tabsCtx?.applySplit ? 0.1 : 0);
+  const edgeRatio = $derived(
+    tabsCtx?.applySplit ? (tile.edgeRatio ?? DEFAULT_EDGE_RATIO) : 0
+  );
 
   class TabsTileDropTarget extends TileDropTarget<Tiles['tabs']> {
     accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
