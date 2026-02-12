@@ -3,11 +3,7 @@
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
-  import {
-    normalize,
-    type Constraint,
-    type NormalizedConstraints,
-  } from '$lib/shared/constraints.js';
+  import { normalize, type Constraint } from '$lib/shared/constraints.js';
   import type { Direction } from '$lib/shared/spatial.js';
   import { almostEqual } from '$lib/shared/math.js';
   import {
@@ -132,6 +128,9 @@
   }
 
   interface SplitAPI {
+    isMinimized: (index: number) => boolean;
+    minimize: (index: number) => boolean;
+    maximize: (index: number) => boolean;
     isCollapsed: (index: number) => boolean;
     collapse: (index: number) => boolean;
     expand: (index: number) => boolean;
@@ -149,6 +148,9 @@
     };
   }
 
+  export const isMinimized = bind('isMinimized');
+  export const minimize = bind('minimize');
+  export const maximize = bind('maximize');
   export const isCollapsed = bind('isCollapsed');
   export const collapse = bind('collapse');
   export const expand = bind('expand');
@@ -165,18 +167,39 @@
       undefined
   );
 
-  let splitEl: HTMLDivElement;
   let resizerEl: HTMLElement;
-
+  
+  let splitClientWidth = $state.raw(0);
+  let splitClientHeight = $state.raw(0);
   const isRow = $derived(tile.direction === 'row');
+  const totalSizePx = $derived(
+    (isRow ? splitClientWidth : splitClientHeight) -
+    (tile.weights.length - 1) * tile.gapPx
+  );
+  const totalWeight = $derived(sumOf(tile.weights));
+  const constraints = $derived(
+    tile.constraints.map((constraints) =>
+      normalize({
+        constraints,
+        targetUnit: 'weight',
+        totalSizePercent: 100,
+        totalSizePx,
+        totalWeight,
+      })
+    )
+  );
+
   let posDiff = 0;
-  let totalSizePx = 0;
   let remaining = 0;
-  let totalWeight = 0;
-  let len = 0;
-  let constraints: NormalizedConstraints[] = [];
+  let snapshottedWeight = 0;
 
   let nextLayout: number[] = [];
+  let len = 0;
+
+  function initNextLayout() {
+    nextLayout = $state.snapshot(tile.weights);
+    len = nextLayout.length;
+  }
 
   function applyNextLayout() {
     for (let j = 0; j < len; j++) {
@@ -190,13 +213,6 @@
       s += arr[i];
     }
     return s;
-  }
-
-  function getContainerSizePx() {
-    return (
-      (isRow ? splitEl.clientWidth : splitEl.clientHeight) -
-      (len - 1) * tile.gapPx
-    );
   }
 
   function expand(weight: number, j: number) {
@@ -244,16 +260,6 @@
     }
   }
 
-  function normalizeConstraints(constraints: Constraint[]) {
-    return normalize({
-      constraints,
-      targetUnit: 'weight',
-      totalSizePercent: 100,
-      totalSizePx,
-      totalWeight,
-    });
-  }
-
   class DraggableResizer extends Draggable {
     #index = 0;
 
@@ -264,11 +270,8 @@
 
     protected onStart(_: PointerEvent, el: HTMLElement): void {
       resizerEl = el;
-      totalSizePx = getContainerSizePx();
-      nextLayout = $state.snapshot(tile.weights);
-      totalWeight = sumOf(nextLayout);
-      len = nextLayout.length;
-      constraints = tile.constraints.map(normalizeConstraints);
+      initNextLayout();
+      snapshottedWeight = totalWeight;
     }
 
     protected onMove(e: PointerEvent) {
@@ -282,7 +285,7 @@
         return;
       }
 
-      const deltaWeight = Math.abs((posDiff * totalWeight) / totalSizePx);
+      const deltaWeight = Math.abs((posDiff * snapshottedWeight) / totalSizePx);
       if (deltaWeight > 0) {
         remaining = deltaWeight;
         this.adjustBy(shrink);
@@ -293,10 +296,10 @@
         }
         if (remaining < 0) {
           posDiff *= -1;
-          remaining = Math.abs(totalWeight - sumOf(nextLayout));
+          remaining = Math.abs(snapshottedWeight - sumOf(nextLayout));
           this.adjustBy(shrink, nextLayout);
         }
-        if (almostEqual(totalWeight, sumOf(nextLayout))) {
+        if (almostEqual(snapshottedWeight, sumOf(nextLayout))) {
           applyNextLayout();
         }
       }
@@ -324,10 +327,6 @@
         }
       }
     }
-  }
-
-  function isChildCollapsed(index: number) {
-    return tile.weights[index] <= constraints[index].collapsedSize;
   }
 
   let indexes = $derived(tile.weights.map((_, i) => i));
@@ -375,20 +374,22 @@
 
   $effect(() => {
     const id = tile.id;
-    API.set(id, {
+    const api: SplitAPI = {
+      isMinimized(index: number) {
+        return tile.weights[index] <= constraints[index].minSize;
+      },
+      minimize() {
+        return false;
+      },
+      maximize() {
+        return false;
+      },
       isCollapsed(index) {
-        totalWeight = sumOf(tile.weights);
-        totalSizePx = getContainerSizePx();
-        constraints[index] = normalizeConstraints(tile.constraints[index]);
-        return isChildCollapsed(index);
+        return tile.weights[index] <= constraints[index].collapsedSize;
       },
       collapse(index) {
-        nextLayout = $state.snapshot(tile.weights);
-        totalWeight = sumOf(nextLayout);
-        len = nextLayout.length;
-        totalSizePx = getContainerSizePx();
-        constraints = tile.constraints.map(normalizeConstraints);
-        if (isChildCollapsed(index)) {
+        initNextLayout();
+        if (api.isCollapsed(index)) {
           return false;
         }
         const rem = redistributeWeight(
@@ -404,12 +405,8 @@
         return true;
       },
       expand(index) {
-        nextLayout = $state.snapshot(tile.weights);
-        totalWeight = sumOf(nextLayout);
-        len = nextLayout.length;
-        totalSizePx = getContainerSizePx();
-        constraints = tile.constraints.map(normalizeConstraints);
-        if (!isChildCollapsed(index)) {
+        initNextLayout();
+        if (!api.isCollapsed(index)) {
           return false;
         }
         const lastWeight = lastWeights[index] ?? constraints[index].minSize;
@@ -429,7 +426,8 @@
         applyNextLayout();
         return true;
       },
-    });
+    };
+    API.set(id, api);
     return () => {
       API.delete(id);
     };
@@ -437,9 +435,14 @@
 </script>
 
 <div
-  bind:this={splitEl}
+  {@attach (el) => {
+    splitClientHeight = el.clientHeight;
+    splitClientWidth = el.clientWidth;
+  }}
+  bind:clientHeight={splitClientHeight}
+  bind:clientWidth={splitClientHeight}
   data-split
-  style="--gap: {tile.gapPx}px;"
+  style="--gap: {tile.gapPx}px; --st-split-gap: {tile.gapPx}px;"
   data-dir={tile.direction}
 >
   {#each tile.children as t, i (t.id)}
