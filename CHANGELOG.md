@@ -1,5 +1,15 @@
 # svelte-tiler
 
+## 0.3.0
+
+### Minor Changes
+
+- [#8](https://github.com/x0k/svelte-tiler/pull/8) [`0baadf0`](https://github.com/x0k/svelte-tiler/commit/0baadf09e23b0920afc1cb43cab6a401f4c6634a) Thanks [@x0k](https://github.com/x0k)! - Export `isCollapsed`, `collapse`, `expand` methods from `split` tile
+
+- [#6](https://github.com/x0k/svelte-tiler/pull/6) [`dab89a1`](https://github.com/x0k/svelte-tiler/commit/dab89a1053a252a8589aa1509fca69c9c67f4378) Thanks [@x0k](https://github.com/x0k)! - Add `collapsedSize` constraint
+
+- [#9](https://github.com/x0k/svelte-tiler/pull/9) [`8277d3c`](https://github.com/x0k/svelte-tiler/commit/8277d3c60d612b6afde2b65a4c5281f429d41957) Thanks [@x0k](https://github.com/x0k)! - Pass `index` and `parent` parameters to a leaf snippet
+
 ## 0.2.0
 
 ### Minor Changes

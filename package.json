@@ -1,6 +1,6 @@
 {
   "name": "svelte-tiler",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A small, unstyled library for building tiling user interfaces.",
   "license": "MIT",
   "homepage": "https://github.com/x0k/svelte-tiler#readme",
