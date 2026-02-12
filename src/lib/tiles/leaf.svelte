@@ -2,7 +2,7 @@
   import { createContext, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
-  import type { TileProps, Tiles } from '$lib/model.js';
+  import type { Tile, TileProps, Tiles } from '$lib/model.js';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -14,7 +14,7 @@
 
   type LeafContext<N extends string = string> = Registry<
     N,
-    Snippet<[Tiles['leaf']]> | undefined
+    Snippet<[Tiles['leaf'], number, Tile | undefined]> | undefined
   >;
 
   const [getContext, setContext] = createContext<LeafContext>();
@@ -39,7 +39,7 @@
 <script lang="ts">
   const leafCtx = getContext();
 
-  let { tile = $bindable() }: TileProps<'leaf'> = $props();
+  let { tile = $bindable(), index, parent }: TileProps<'leaf'> = $props();
 </script>
 
-{@render leafCtx.get(tile.name)?.(tile)}
+{@render leafCtx.get(tile.name)?.(tile, index, parent)}
