@@ -133,7 +133,7 @@
     maximize: (index: number) => boolean;
     isCollapsed: (index: number) => boolean;
     collapse: (index: number) => boolean;
-    expand: (index: number) => boolean;
+    restore: (index: number) => boolean;
   }
 
   const API = new Map<string, SplitAPI>();
@@ -153,7 +153,7 @@
   export const maximize = bind('maximize');
   export const isCollapsed = bind('isCollapsed');
   export const collapse = bind('collapse');
-  export const expand = bind('expand');
+  export const restore = bind('restore');
 </script>
 
 <script lang="ts">
@@ -168,13 +168,13 @@
   );
 
   let resizerEl: HTMLElement;
-  
+
   let splitClientWidth = $state.raw(0);
   let splitClientHeight = $state.raw(0);
   const isRow = $derived(tile.direction === 'row');
   const totalSizePx = $derived(
     (isRow ? splitClientWidth : splitClientHeight) -
-    (tile.weights.length - 1) * tile.gapPx
+      (tile.weights.length - 1) * tile.gapPx
   );
   const totalWeight = $derived(sumOf(tile.weights));
   const constraints = $derived(
@@ -378,11 +378,40 @@
       isMinimized(index: number) {
         return tile.weights[index] <= constraints[index].minSize;
       },
-      minimize() {
-        return false;
+      minimize(index: number) {
+        initNextLayout();
+        if (api.isMinimized(index)) {
+          return false;
+        }
+        const rem = redistributeWeight(
+          index,
+          nextLayout[index] - constraints[index].minSize
+        );
+        if (rem > 0) {
+          return false;
+        }
+        lastWeights[index] = nextLayout[index];
+        nextLayout[index] = constraints[index].minSize;
+        applyNextLayout();
+        return true;
       },
-      maximize() {
-        return false;
+      maximize(index: number) {
+        initNextLayout();
+        if (nextLayout[index] >= constraints[index].maxSize) {
+          return false;
+        }
+        redistributeWeight(
+          index,
+          nextLayout[index] - constraints[index].maxSize
+        );
+        const diff = totalWeight - sumOf(nextLayout);
+        if (almostEqual(diff, 0)) {
+          return false;
+        }
+        lastWeights[index] = nextLayout[index];
+        nextLayout[index] += diff;
+        applyNextLayout();
+        return true;
       },
       isCollapsed(index) {
         return tile.weights[index] <= constraints[index].collapsedSize;
@@ -404,13 +433,13 @@
         applyNextLayout();
         return true;
       },
-      expand(index) {
+      restore(index) {
         initNextLayout();
-        if (!api.isCollapsed(index)) {
+        const lastWeight = lastWeights[index] ?? constraints[index].minSize;
+        let delta = nextLayout[index] - lastWeight;
+        if (almostEqual(delta, 0)) {
           return false;
         }
-        const lastWeight = lastWeights[index] ?? constraints[index].minSize;
-        let delta = constraints[index].collapsedSize - lastWeight;
         let rem = redistributeWeight(index, delta);
         if (rem > 0) {
           delta += rem;
@@ -421,8 +450,8 @@
             return false;
           }
         }
-        nextLayout[index] = lastWeight;
         lastWeights[index] = undefined;
+        nextLayout[index] = lastWeight;
         applyNextLayout();
         return true;
       },
