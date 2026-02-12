@@ -1,11 +1,5 @@
 <script lang="ts" module>
-  import {
-    createContext,
-    getContext,
-    setContext,
-    tick,
-    type Snippet,
-  } from 'svelte';
+  import { getContext, setContext, tick, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -137,13 +131,27 @@
     });
   }
 
-  const [getSplitContext, setSplitContext] = createContext<{
+  interface SplitAPI {
     isCollapsed: (index: number) => boolean;
     collapse: (index: number) => boolean;
     expand: (index: number) => boolean;
-  }>();
+  }
 
-  export { getSplitContext };
+  const API = new Map<string, SplitAPI>();
+
+  function bind<M extends keyof SplitAPI>(method: M) {
+    return (splitId: string, ...args: Parameters<SplitAPI[M]>) => {
+      const api = API.get(splitId);
+      if (!api) {
+        throw new Error(`Unable to find split with id: "${splitId}"`);
+      }
+      return api[method].apply(api, args);
+    };
+  }
+
+  export const isCollapsed = bind('isCollapsed');
+  export const collapse = bind('collapse');
+  export const expand = bind('expand');
 </script>
 
 <script lang="ts">
@@ -318,21 +326,22 @@
     }
   }
 
+  function isChildCollapsed(index: number) {
+    return tile.weights[index] <= constraints[index].collapsedSize;
+  }
+
+  let indexes = $derived(tile.weights.map((_, i) => i));
   // TODO: Implement the ability to collapse/expand
-  function redistribute(
-    indexes: number[],
-    changedIndex: number,
-    delta: number
-  ) {
+  function redistributeWeight(pivotIndex: number, delta: number) {
     let remaining = Math.abs(delta);
     const isGrow = delta > 0;
+    const isCandidate = (i: number) =>
+      isGrow
+        ? nextLayout[i] < constraints[i].maxSize
+        : nextLayout[i] > constraints[i].minSize;
 
     let candidateIndexes = indexes.filter(
-      (i) =>
-        i !== changedIndex &&
-        (isGrow
-          ? nextLayout[i] < constraints[i].maxSize
-          : nextLayout[i] > constraints[i].minSize)
+      (i) => i !== pivotIndex && isCandidate(i)
     );
 
     while (remaining > 0 && candidateIndexes.length > 0) {
@@ -354,61 +363,76 @@
 
       remaining -= consumed;
 
-      candidateIndexes = candidateIndexes.filter((p) =>
-        isGrow
-          ? nextLayout[p] < constraints[p].maxSize
-          : nextLayout[p] > constraints[p].minSize
-      );
+      candidateIndexes = candidateIndexes.filter(isCandidate);
     }
 
     return remaining;
   }
 
-  setSplitContext({
-    isCollapsed(index) {
-      totalWeight = sumOf(tile.weights);
-      totalSizePx = getContainerSizePx();
-      const constraints = normalizeConstraints(tile.constraints[index]);
-      return tile.weights[index] <= constraints.collapsedSize;
-    },
-    collapse(index) {
-      nextLayout = $state.snapshot(tile.weights);
-      totalWeight = sumOf(nextLayout);
-      len = nextLayout.length;
-      totalSizePx = getContainerSizePx();
-      constraints = tile.constraints.map(normalizeConstraints);
-      const rem = redistribute(
-        nextLayout.map((_, i) => i),
-        index,
-        nextLayout[index] - constraints[index].collapsedSize
-      );
-      nextLayout[index] = constraints[index].collapsedSize;
-      if (rem > 0) {
-        return false;
-      }
-      applyNextLayout();
-      return false;
-    },
-    expand(index) {
-      nextLayout = $state.snapshot(tile.weights);
-      totalWeight = sumOf(nextLayout);
-      len = nextLayout.length;
-      totalSizePx = getContainerSizePx();
-      constraints = tile.constraints.map(normalizeConstraints);
-      const rem = redistribute(
-        nextLayout.map((_, i) => i),
-        index,
-        // TODO: Restore last weight
-        constraints[index].collapsedSize - constraints[index].minSize
-      );
-      nextLayout[index] = constraints[index].minSize;
-      console.log(nextLayout, rem)
-      if (rem > 0) {
-        return false;
-      }
-      applyNextLayout();
-      return false;
-    },
+  let lastWeights = $derived(
+    new Array<number | undefined>(tile.weights.length)
+  );
+
+  $effect(() => {
+    const id = tile.id;
+    API.set(id, {
+      isCollapsed(index) {
+        totalWeight = sumOf(tile.weights);
+        totalSizePx = getContainerSizePx();
+        constraints[index] = normalizeConstraints(tile.constraints[index]);
+        return isChildCollapsed(index);
+      },
+      collapse(index) {
+        nextLayout = $state.snapshot(tile.weights);
+        totalWeight = sumOf(nextLayout);
+        len = nextLayout.length;
+        totalSizePx = getContainerSizePx();
+        constraints = tile.constraints.map(normalizeConstraints);
+        if (isChildCollapsed(index)) {
+          return false;
+        }
+        const rem = redistributeWeight(
+          index,
+          nextLayout[index] - constraints[index].collapsedSize
+        );
+        if (rem > 0) {
+          return false;
+        }
+        lastWeights[index] = nextLayout[index];
+        nextLayout[index] = constraints[index].collapsedSize;
+        applyNextLayout();
+        return true;
+      },
+      expand(index) {
+        nextLayout = $state.snapshot(tile.weights);
+        totalWeight = sumOf(nextLayout);
+        len = nextLayout.length;
+        totalSizePx = getContainerSizePx();
+        constraints = tile.constraints.map(normalizeConstraints);
+        if (!isChildCollapsed(index)) {
+          return false;
+        }
+        const lastWeight = lastWeights[index] ?? constraints[index].minSize;
+        let delta = constraints[index].collapsedSize - lastWeight;
+        let rem = redistributeWeight(index, delta);
+        if (rem > 0) {
+          delta += rem;
+          if (delta < 0) {
+            nextLayout = $state.snapshot(tile.weights);
+            redistributeWeight(index, delta);
+          } else {
+            return false;
+          }
+        }
+        nextLayout[index] = lastWeight;
+        lastWeights[index] = undefined;
+        applyNextLayout();
+        return true;
+      },
+    });
+    return () => {
+      API.delete(id);
+    };
   });
 </script>
 
