@@ -165,7 +165,6 @@
           weight: 0.2,
           constraints: [
             { type: 'minSize', unit: 'px', value: 200 },
-            { type: 'minSize', unit: 'weight', value: 0.2 },
             { type: 'collapsedSize', unit: 'px', value: 0 },
           ],
         },
