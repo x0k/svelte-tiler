@@ -1,4 +1,5 @@
 import { createContext } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
 
 import { DndContext } from './shared/dnd.svelte.ts';
 
@@ -26,25 +27,19 @@ export interface TileDefinition<T extends TileType> {
 
 export type TileDefinitions = { [T in TileType]: TileDefinition<T> };
 
-export type TileEffects = {
-  [T in TileType]?: (tile: Tiles[T]) => void | (() => void);
-};
-
 export interface TilerContextOptions {
   definitions: TileDefinitions;
   dnd?: DndContext<Tile>;
-  effects?: TileEffects;
 }
 
 export class TilerContext {
   protected definitions: TileDefinitions;
-  protected effects: TileEffects;
   protected updateRootFn: ((tile: Tile) => void) | undefined;
 
   protected registry = new FinalizationRegistry<string>((id) => {
     this.tiles.delete(id);
   });
-  protected tiles = new Map<string, WeakRef<Tile>>();
+  protected tiles = new SvelteMap<string, WeakRef<Tile>>();
   protected parents = new WeakMap<Tile, Tile>();
 
   readonly dnd: DndContext<Tile>;
@@ -52,10 +47,12 @@ export class TilerContext {
   constructor(options: TilerContextOptions) {
     this.definitions = options.definitions;
     this.dnd = options.dnd ?? new DndContext();
-    this.effects = options.effects ?? {};
   }
 
-  registerTile(tile: Tile, parent: Tile | ((tile: Tile) => void)) {
+  registerTile(
+    tile: Tile,
+    parent: Tile | ((tile: Tile) => void)
+  ): (() => void) | void {
     this.tiles.set(tile.id, new WeakRef(tile));
     this.registry.register(tile, tile.id);
     if (typeof parent === 'function') {
@@ -66,8 +63,8 @@ export class TilerContext {
     }
   }
 
-  getTileEffect(tile: Tile) {
-    return this.effects[tile.type];
+  getTileById(tileId: string) {
+    return this.tiles.get(tileId)?.deref();
   }
 
   getTileComponent(tile: Tile) {
@@ -90,7 +87,7 @@ export class TilerContext {
   }
 
   replaceTile(tileId: string | undefined, replace: Tile) {
-    const tile = tileId && this.getTileById(tileId);
+    const tile = tileId && this.getTileByIdOrThrow(tileId);
     this.replace(tile || undefined, replace);
   }
 
@@ -108,7 +105,7 @@ export class TilerContext {
     index: number,
     data: TileInsertData<T>
   ) {
-    const tile = this.getTileById(tileId);
+    const tile = this.getTileByIdOrThrow(tileId);
     if (tile.type !== type) {
       throw new Error(
         `Tile type mismatch: expected "${type}", but got "${tile.type}"`
@@ -122,7 +119,7 @@ export class TilerContext {
   }
 
   removeChildFromTile(tileId: string, index: number) {
-    this.removeChildFrom(this.getTileById(tileId), index);
+    this.removeChildFrom(this.getTileByIdOrThrow(tileId), index);
   }
 
   remove(tile: Tile) {
@@ -139,10 +136,10 @@ export class TilerContext {
   }
 
   removeTile(tileId: string) {
-    this.remove(this.getTileById(tileId));
+    this.remove(this.getTileByIdOrThrow(tileId));
   }
 
-  protected getTileById(tileId: string) {
+  protected getTileByIdOrThrow(tileId: string) {
     const tile = this.tiles.get(tileId)?.deref();
     if (tile === undefined) {
       throw new Error(`Unable to find tile with "${tileId}" id`);

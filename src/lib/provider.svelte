@@ -1,11 +1,13 @@
-<script lang="ts" generics="T">
-  import { setContext, type Snippet } from 'svelte';
+<script lang="ts">
+  import type { Snippet } from 'svelte';
 
-  const { key, value, children }: { key: symbol; value: T; children: Snippet } =
-    $props();
+  const {
+    setContext,
+    children,
+  }: { setContext: () => void; children: Snippet } = $props();
 
   // svelte-ignore state_referenced_locally
-  setContext(key, value);
+  setContext();
 </script>
 
 {@render children()}
