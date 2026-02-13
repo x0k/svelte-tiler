@@ -546,7 +546,9 @@
 >
   {#each tile.children as t, i (t.id)}
     {@const draggable = new DraggableResizer(dndCtx, i)}
-    <Provider key={SPLIT_ITEM_API_CONTEXT_KEY} value={createApi(i)}>
+    <Provider
+      setContext={() => setContext(SPLIT_ITEM_API_CONTEXT_KEY, createApi(i))}
+    >
       <div data-split-item style="--grow: {tile.weights[i]}">
         {#if i > 0}
           <div
