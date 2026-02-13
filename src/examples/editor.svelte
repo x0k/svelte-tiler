@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { HTMLAttributes } from 'svelte/elements';
   import { SvelteMap } from 'svelte/reactivity';
 
   import type { Constraint } from '$lib/shared/constraints.js';
@@ -137,30 +138,37 @@
   >
 {/snippet}
 
-{#snippet editorHeader(tile: Tiles['tabs'], i: number, d: Draggable<Tile>)}
-  {@render gripperIcon(d)}
-  <span
-    bind:textContent={
-      () => tile.titles[i],
-      (v) => {
-        tile.titles[i] = v;
-        names.set(tile.children[i].id, v);
+{#snippet editorHeader(
+  props: HTMLAttributes<HTMLElement>,
+  tile: Tiles['tabs'],
+  i: number,
+  d: Draggable<Tile>
+)}
+  <div {...props}>
+    {@render gripperIcon(d)}
+    <span
+      bind:textContent={
+        () => tile.titles[i],
+        (v) => {
+          tile.titles[i] = v;
+          names.set(tile.children[i].id, v);
+        }
       }
-    }
-    contenteditable
-    spellcheck={false}
-  ></span>
-  <button
-    onclick={(e) => {
-      e.stopPropagation();
-      const id = tile.children[i].id;
-      ctx.removeChildFrom(tile, i);
-      names.delete(id);
-      content.delete(id);
-    }}
-  >
-    {@render trashIcon()}
-  </button>
+      contenteditable
+      spellcheck={false}
+    ></span>
+    <button
+      onclick={(e) => {
+        e.stopPropagation();
+        const id = tile.children[i].id;
+        ctx.removeChildFrom(tile, i);
+        names.delete(id);
+        content.delete(id);
+      }}
+    >
+      {@render trashIcon()}
+    </button>
+  </div>
 {/snippet}
 
 {#snippet editorActions(tile: Tiles['tabs'])}
