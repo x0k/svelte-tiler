@@ -1,5 +1,11 @@
 <script lang="ts" module>
-  import { getContext, setContext, tick, type Snippet } from 'svelte';
+  import {
+    createContext,
+    getContext,
+    setContext,
+    tick,
+    type Snippet,
+  } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -15,6 +21,7 @@
   } from '$lib/model.js';
   import type { TilerContext } from '$lib/context.js';
   import { TileDropTarget } from '$lib/dnd.js';
+  import Provider from '$lib/provider.svelte';
 
   declare module '../model.js' {
     interface TileRegistry {
@@ -128,17 +135,33 @@
   }
 
   interface SplitAPI {
-    isMinimized: (index: number) => boolean;
+    readonly splitTileId: string;
     minimize: (index: number) => boolean;
+    isMinimized: (index: number) => boolean;
     maximize: (index: number) => boolean;
-    isCollapsed: (index: number) => boolean;
+    isMaximized: (index: number) => boolean;
     collapse: (index: number) => boolean;
+    isCollapsed: (index: number) => boolean;
     restore: (index: number) => boolean;
+  }
+
+  type SplitApiMethod = keyof {
+    [K in keyof SplitAPI as SplitAPI[K] extends Function ? K : never]: K;
+  };
+
+  type SplitItemAPI = Omit<SplitAPI, SplitApiMethod> & {
+    [K in SplitApiMethod]: (index?: number) => boolean;
+  };
+
+  const SPLIT_ITEM_API_CONTEXT_KEY = Symbol();
+
+  export function getItemContext(): SplitItemAPI {
+    return getContext(SPLIT_ITEM_API_CONTEXT_KEY);
   }
 
   const API = new Map<string, SplitAPI>();
 
-  function bind<M extends keyof SplitAPI>(method: M) {
+  function bind<M extends SplitApiMethod>(method: M) {
     return (splitId: string, ...args: Parameters<SplitAPI[M]>) => {
       const api = API.get(splitId);
       if (!api) {
@@ -339,15 +362,13 @@
         ? nextLayout[i] < constraints[i].maxSize
         : nextLayout[i] > constraints[i].minSize;
 
-    let candidateIndexes = indexes.filter(
-      (i) => i !== pivotIndex && isCandidate(i)
-    );
+    let candidates = indexes.filter((i) => i !== pivotIndex && isCandidate(i));
 
-    while (remaining > 0 && candidateIndexes.length > 0) {
-      const totalWeight = sumOf(candidateIndexes.map((i) => nextLayout[i]));
+    while (remaining > 0 && candidates.length > 0) {
+      const totalWeight = sumOf(candidates.map((i) => nextLayout[i]));
       let consumed = 0;
 
-      for (const candidateIndex of candidateIndexes) {
+      for (const candidateIndex of candidates) {
         const share = remaining * (nextLayout[candidateIndex] / totalWeight);
 
         const capacity = isGrow
@@ -362,7 +383,7 @@
 
       remaining -= consumed;
 
-      candidateIndexes = candidateIndexes.filter(isCandidate);
+      candidates = candidates.filter(isCandidate);
     }
 
     return remaining;
@@ -371,16 +392,17 @@
   let lastWeights = $derived(
     new Array<number | undefined>(tile.weights.length)
   );
-
-  $effect(() => {
-    const id = tile.id;
-    const api: SplitAPI = {
-      isMinimized(index: number) {
+  function createApi(defaultIndex: number): SplitItemAPI {
+    return {
+      get splitTileId() {
+        return tile.id;
+      },
+      isMinimized(index = defaultIndex) {
         return tile.weights[index] <= constraints[index].minSize;
       },
-      minimize(index: number) {
+      minimize(index = defaultIndex) {
         initNextLayout();
-        if (api.isMinimized(index)) {
+        if (api.isMinimized(index) && !api.isCollapsed(index)) {
           return false;
         }
         const rem = redistributeWeight(
@@ -395,28 +417,31 @@
         applyNextLayout();
         return true;
       },
-      maximize(index: number) {
-        initNextLayout();
-        if (nextLayout[index] >= constraints[index].maxSize) {
-          return false;
+      isMaximized(index = defaultIndex) {
+        if (tile.weights[index] >= constraints[index].maxSize) {
+          return true;
         }
+        initNextLayout();
         redistributeWeight(
           index,
           nextLayout[index] - constraints[index].maxSize
         );
         const diff = totalWeight - sumOf(nextLayout);
-        if (almostEqual(diff, 0)) {
+        return almostEqual(diff, 0);
+      },
+      maximize(index = defaultIndex) {
+        if (api.isMaximized(index)) {
           return false;
         }
         lastWeights[index] = nextLayout[index];
-        nextLayout[index] += diff;
+        nextLayout[index] += totalWeight - sumOf(nextLayout);
         applyNextLayout();
         return true;
       },
-      isCollapsed(index) {
+      isCollapsed(index = defaultIndex) {
         return tile.weights[index] <= constraints[index].collapsedSize;
       },
-      collapse(index) {
+      collapse(index = defaultIndex) {
         initNextLayout();
         if (api.isCollapsed(index)) {
           return false;
@@ -433,20 +458,27 @@
         applyNextLayout();
         return true;
       },
-      restore(index) {
+      restore(index = defaultIndex) {
         initNextLayout();
-        const lastWeight = lastWeights[index] ?? constraints[index].minSize;
+        let lastWeight = lastWeights[index] ?? constraints[index].minSize;
         let delta = nextLayout[index] - lastWeight;
         if (almostEqual(delta, 0)) {
           return false;
         }
         let rem = redistributeWeight(index, delta);
         if (rem > 0) {
-          delta += rem;
-          if (delta < 0) {
-            nextLayout = $state.snapshot(tile.weights);
-            redistributeWeight(index, delta);
-          } else {
+          delta += Math.sign(delta) * -rem;
+          lastWeight = nextLayout[index] - delta;
+          if (
+            delta < 0
+              ? lastWeight < constraints[index].minSize
+              : lastWeight > constraints[index].maxSize
+          ) {
+            return false;
+          }
+          initNextLayout();
+          rem = redistributeWeight(index, delta);
+          if (rem > 0) {
             return false;
           }
         }
@@ -456,7 +488,11 @@
         return true;
       },
     };
-    API.set(id, api);
+  }
+
+  const api: SplitAPI = createApi(-1);
+  $effect(() => {
+    const id = tile.id;
     return () => {
       API.delete(id);
     };
@@ -476,18 +512,20 @@
 >
   {#each tile.children as t, i (t.id)}
     {@const draggable = new DraggableResizer(dndCtx, i)}
-    <div data-split-item style="--grow: {tile.weights[i]}">
-      {#if i > 0}
-        <div
-          data-split-resizer
-          {@attach draggable.register}
-          data-dragged={draggable.isDragged}
-        >
-          {@render resizerSnippet?.(draggable, tile, i)}
-        </div>
-      {/if}
-      {@render child(i)}
-    </div>
+    <Provider key={SPLIT_ITEM_API_CONTEXT_KEY} value={createApi(i)}>
+      <div data-split-item style="--grow: {tile.weights[i]}">
+        {#if i > 0}
+          <div
+            data-split-resizer
+            {@attach draggable.register}
+            data-dragged={draggable.isDragged}
+          >
+            {@render resizerSnippet?.(draggable, tile, i)}
+          </div>
+        {/if}
+        {@render child(i)}
+      </div>
+    </Provider>
   {/each}
 </div>
 
