@@ -279,14 +279,19 @@
     onclick={() => {
       tile.selectedTab = i;
       activeTabsId = tile.id;
+      if (itemCtx.isMinimized()) {
+        itemCtx.maximize();
+      }
     }}
     ondblclick={() => {
+      if (layout.children[1]?.id === tile.id) {
+        return;
+      }
       if (itemCtx.isMaximized()) {
         if (!restore?.()) {
-          restore = undefined;
-        } else {
           itemCtx.minimize();
         }
+        restore = undefined;
       } else {
         itemCtx.maximize();
         restore ??= () => itemCtx.restore();
