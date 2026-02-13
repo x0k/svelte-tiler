@@ -1,11 +1,5 @@
 <script lang="ts" module>
-  import {
-    createContext,
-    getContext,
-    setContext,
-    tick,
-    type Snippet,
-  } from 'svelte';
+  import { getContext, setContext, tick, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
   import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
@@ -135,22 +129,56 @@
   }
 
   interface SplitAPI {
-    readonly splitTileId: string;
-    minimize: (index: number) => boolean;
+    /**
+     * Checks if the panel is at its minimum size.
+     * @returns true if weight <= minSize
+     */
     isMinimized: (index: number) => boolean;
-    maximize: (index: number) => boolean;
-    isMaximized: (index: number) => boolean;
-    collapse: (index: number) => boolean;
+    /**
+     * Shrinks the panel to its minimum size.
+     * @returns false if:
+     * - Already at minimum size and not collapsed
+     * - Cannot redistribute freed space to other panels (all at maxSize)
+     */
+    minimize: (index: number) => boolean;
+    /**
+     * Checks if the panel is collapsed.
+     * @returns true if weight <= collapsedSize
+     */
     isCollapsed: (index: number) => boolean;
+    /**
+     * Collapses the panel to its collapsed size (smaller than minimum).
+     * @returns false if:
+     * - Already collapsed
+     * - Cannot redistribute freed space to other panels (all at maxSize)
+     */
+    collapse: (index: number) => boolean;
+    /**
+     * Checks if the panel is maximized.
+     * @returns true if at maxSize or cannot grow further without violating other constraints
+     */
+    isMaximized: (index: number) => boolean;
+    /**
+     * Expands the panel to take all available space.
+     * @returns false if already maximized (no space to take from other panels)
+     */
+    maximize: (index: number) => boolean;
+    /**
+     * Restores the panel to its previously saved size.
+     * Attempts partial restoration if full restoration is blocked.
+     * @returns false if:
+     * - No saved size to restore (must minimize/maximize/collapse first to save current size)
+     * - Adjusted target size violates minSize/maxSize constraints
+     * - Cannot redistribute space even after adjustment (all panels at their limits)
+     */
     restore: (index: number) => boolean;
   }
 
-  type SplitApiMethod = keyof {
-    [K in keyof SplitAPI as SplitAPI[K] extends Function ? K : never]: K;
-  };
-
-  type SplitItemAPI = Omit<SplitAPI, SplitApiMethod> & {
-    [K in SplitApiMethod]: (index?: number) => boolean;
+  type SplitItemAPI = {
+    readonly splitTileId: string;
+    readonly splitChildIndex: number;
+  } & {
+    [K in keyof SplitAPI]: (index?: number) => boolean;
   };
 
   const SPLIT_ITEM_API_CONTEXT_KEY = Symbol();
@@ -161,7 +189,7 @@
 
   const API = new Map<string, SplitAPI>();
 
-  function bind<M extends SplitApiMethod>(method: M) {
+  function bind<M extends keyof SplitAPI>(method: M) {
     return (splitId: string, ...args: Parameters<SplitAPI[M]>) => {
       const api = API.get(splitId);
       if (!api) {
@@ -173,6 +201,7 @@
 
   export const isMinimized = bind('isMinimized');
   export const minimize = bind('minimize');
+  export const isMaximized = bind('maximize');
   export const maximize = bind('maximize');
   export const isCollapsed = bind('isCollapsed');
   export const collapse = bind('collapse');
@@ -397,6 +426,7 @@
       get splitTileId() {
         return tile.id;
       },
+      splitChildIndex: defaultIndex,
       isMinimized(index = defaultIndex) {
         return tile.weights[index] <= constraints[index].minSize;
       },
@@ -460,7 +490,10 @@
       },
       restore(index = defaultIndex) {
         initNextLayout();
-        let lastWeight = lastWeights[index] ?? constraints[index].minSize;
+        let lastWeight = lastWeights[index];
+        if (lastWeight === undefined) {
+          return false;
+        }
         let delta = nextLayout[index] - lastWeight;
         if (almostEqual(delta, 0)) {
           return false;
