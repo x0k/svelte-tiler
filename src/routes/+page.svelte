@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Component } from 'svelte';
+  import type { HTMLAttributes } from 'svelte/elements';
   import CodiconClose from '~icons/codicon/close';
   import CodiconCloseAll from '~icons/codicon/close-all';
   import MaterialIconThemeSvelte from '~icons/material-icon-theme/svelte';
@@ -63,7 +64,7 @@
     query: '?example',
   }) as Record<string, () => Promise<string>>;
 
-  let activeTabs: Tiles['tabs'];
+  let activeTabs = $state.raw<Tiles['tabs'] | undefined>();
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
     feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
@@ -218,6 +219,9 @@
   }
 
   function onFileClick(node: FileNode) {
+    if (!activeTabs) {
+      return;
+    }
     const index = activeTabs.children.findIndex((c) => c.id === node.path);
     if (index < 0) {
       const s = activeTabs.selectedTab;
@@ -242,18 +246,26 @@
   <Panel bind:layout />
 </div>
 
-{#snippet tabHeader(tile: Tiles['tabs'], i: number)}
-  <FileIcon extension={getFileExtension(tile.titles[i])} />
-  {tile.titles[i]}
-  <button
-    class="button"
-    onclick={(e) => {
-      e.stopPropagation();
-      ctx.removeChildFrom(tile, i);
-    }}
-  >
-    <CodiconClose />
-  </button>
+{#snippet tabHeader(
+  props: HTMLAttributes<HTMLElement>,
+  tile: Tiles['tabs'],
+  i: number
+)}
+  <div {...props}>
+    <FileIcon extension={getFileExtension(tile.titles[i])} />
+    <span class={[tile.id === activeTabs?.id && 'active-tab']}
+      >{tile.titles[i]}</span
+    >
+    <button
+      class="button"
+      onclick={(e) => {
+        e.stopPropagation();
+        ctx.removeChildFrom(tile, i);
+      }}
+    >
+      <CodiconClose />
+    </button>
+  </div>
 {/snippet}
 
 {#snippet actions(tile: Tiles['tabs'])}
@@ -316,6 +328,10 @@
   .app {
     width: 100%;
     height: 100vh;
+  }
+
+  .active-tab {
+    font-weight: 600;
   }
 
   .example {

@@ -1,5 +1,7 @@
 <script lang="ts" module>
   import { getContext, setContext, type Snippet } from 'svelte';
+  import type { HTMLAttributes } from 'svelte/elements';
+  import { createAttachmentKey } from 'svelte/attachments';
 
   import type { Draggable } from '$lib/shared/dnd.svelte.js';
   import type { Registry } from '$lib/shared/registry.js';
@@ -46,6 +48,8 @@
   }
 
   export const DEFAULT_EDGE_RATIO = 0.1;
+  export const DROPPABLE_ATTACHMENT_KEY = createAttachmentKey();
+  export const DRAGGABLE_ATTACHMENT_KEY = createAttachmentKey();
 
   export function create<H extends string, E extends string, A extends string>(
     options: TabsOptions<H, E, A>
@@ -87,7 +91,10 @@
     actions?: Registry<A, Snippet<[Tiles['tabs']]> | undefined>;
     headers?: Registry<
       H,
-      Snippet<[Tiles['tabs'], number, Draggable<Tile>]> | undefined
+      | Snippet<
+          [HTMLAttributes<HTMLElement>, Tiles['tabs'], number, Draggable<Tile>]
+        >
+      | undefined
     >;
     empty?: Registry<E, Snippet<[Tiles['tabs']]> | undefined>;
   }
@@ -287,8 +294,14 @@
   );
 </script>
 
-{#snippet defaultTabHeader(t: Tiles['tabs'], index: number)}
-  {t.titles[index]}
+{#snippet defaultTabHeader(
+  props: HTMLAttributes<HTMLElement>,
+  t: Tiles['tabs'],
+  index: number
+)}
+  <div {...props}>
+    {t.titles[index]}
+  </div>
 {/snippet}
 
 <div data-tabs>
@@ -306,22 +319,31 @@
               selectedTab: 0,
             }),
           })}
-          <div
-            data-tabs-header
-            {@attach droppable.register}
-            {@attach draggable.register}
-            role="tab"
-            tabindex="0"
-            onclick={() => (tile.selectedTab = i)}
-            onkeydown={handleKeydown}
-            data-dragged={draggable.isDragged}
-            data-over={droppable.isOver}
-            aria-selected={tile.selectedTab === i}
-            data-hpart={droppable.hpart}
-            data-vpart={droppable.vpart}
-          >
-            {@render tabHeader(tile, i, draggable)}
-          </div>
+          {@const props = {
+            [DROPPABLE_ATTACHMENT_KEY]: droppable.register,
+            [DRAGGABLE_ATTACHMENT_KEY]: draggable.register,
+            'data-tabs-header': '',
+            role: 'tab',
+            tabindex: 0,
+            onclick: () => (tile.selectedTab = i),
+            onkeydown: handleKeydown,
+            get 'aria-selected'() {
+              return tile.selectedTab === i;
+            },
+            get 'data-dragged'() {
+              return draggable.isDragged;
+            },
+            get 'data-over'() {
+              return droppable.isOver;
+            },
+            get 'data-hpart'() {
+              return droppable.hpart;
+            },
+            get 'data-vpart'() {
+              return droppable.vpart;
+            },
+          } satisfies HTMLAttributes<HTMLElement>}
+          {@render tabHeader(props, tile, i, draggable)}
         {/each}
       </div>
       <div
@@ -356,7 +378,7 @@
 </div>
 
 <style>
-  [data-tabs-header] {
+  :global [data-tabs-header] {
     user-select: none;
     cursor: pointer;
     &[data-dragged='true'] {
