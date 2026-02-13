@@ -526,7 +526,7 @@
   const api: SplitAPI = createApi(-1);
   $effect(() => {
     const id = tile.id;
-    API.set(id, api)
+    API.set(id, api);
     return () => {
       API.delete(id);
     };
