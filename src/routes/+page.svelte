@@ -82,7 +82,26 @@
 
   const ctx = new CustomTilerContext({
     dnd,
-    definitions: { split: Split, leaf: Leaf, tabs: Tabs },
+    definitions: {
+      leaf: Leaf,
+      split: {
+        ...Split,
+        onRemoveChild(ctx, tile, index) {
+          const c = tile.children[index];
+          if (c.id === activeTabsId) {
+            activeTabsId = tile.children[index > 0 ? index - 1 : 1].id;
+          }
+          Split.onRemoveChild(ctx, tile, index);
+        },
+      },
+      tabs: {
+        ...Tabs,
+        onInsert(ctx, tile, index, data) {
+          Tabs.onInsert(ctx, tile, index, data);
+          activeTabsId = tile.id;
+        },
+      },
+    },
   });
   setTilerContext(ctx);
 
@@ -146,7 +165,15 @@
           gapPx: 1,
         })
       );
+      activeTabsId = adjacent.id;
     },
+  });
+  const firstTabs = createTabs({
+    headersDirection: 'row',
+    tabHeader: 'tabHeader',
+    actions: 'actions',
+    empty: 'empty',
+    tabs: [['README.md', createFileLeaf('./README.md')]],
   });
   let layout = $state(
     Split.create({
@@ -162,13 +189,7 @@
           ],
         },
         {
-          tile: createTabs({
-            headersDirection: 'row',
-            tabHeader: 'tabHeader',
-            actions: 'actions',
-            empty: 'empty',
-            tabs: [['README.md', createFileLeaf('./README.md')]],
-          }),
+          tile: firstTabs,
           constraints: defaultConstraints,
         },
       ],
@@ -210,33 +231,37 @@
     });
   }
 
-  // svelte-ignore state_referenced_locally
-  let activeTabs = $state.raw<Tiles['tabs'] | undefined>(
-    layout.children[1] as Tiles['tabs']
-  );
+  let activeTabsId = $state.raw<string | undefined>(firstTabs.id);
+  const activeTabsTile = $derived.by(() => {
+    const tile = activeTabsId && ctx.getTileById(activeTabsId);
+    return !tile || tile.type !== 'tabs' ? undefined : tile;
+  });
 
   function onFileClick(node: FileNode) {
-    if (!activeTabs) {
+    if (!activeTabsTile) {
       return;
     }
-    const index = activeTabs.children.findIndex((c) => c.id === node.path);
+    const index = activeTabsTile.children.findIndex((c) => c.id === node.path);
     if (index < 0) {
-      const s = activeTabs.selectedTab;
-      if (activeTabs.children[s]) {
-        activeTabs.titles[s] = node.name;
-        activeTabs.children[s] = createFileLeaf(node.path);
-      } else {
-        ctx.insertInto<'tabs'>(activeTabs, activeTabs.children.length, {
-          titles: [node.name],
-          children: [createFileLeaf(node.path)],
-        });
-      }
+      ctx.insertInto<'tabs'>(activeTabsTile, activeTabsTile.children.length, {
+        titles: [node.name],
+        children: [createFileLeaf(node.path)],
+      });
     } else {
-      activeTabs.selectedTab = index;
+      activeTabsTile.selectedTab = index;
     }
   }
 
   const tree = buildTree(files);
+
+  function handleKeydown(e: KeyboardEvent & { currentTarget: HTMLElement }) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.currentTarget.click();
+    }
+  }
+
+  let restore: (() => void) | undefined;
 </script>
 
 <div bind:this={portalEl} class="app">
@@ -248,11 +273,28 @@
   tile: Tiles['tabs'],
   i: number
 )}
-  <div {...props}>
+  {@const itemCtx = Split.getItemContext()}
+  <div
+    {...props}
+    onclick={() => {
+      tile.selectedTab = i;
+      activeTabsId = tile.id;
+    }}
+    ondblclick={() => {
+      if (itemCtx.isMaximized()) {
+        if (!restore?.()) {
+          restore = undefined;
+        } else {
+          itemCtx.minimize();
+        }
+      } else {
+        itemCtx.maximize();
+        restore ??= () => itemCtx.restore();
+      }
+    }}
+  >
     <FileIcon extension={getFileExtension(tile.titles[i])} />
-    <span class={[tile.id === activeTabs?.id && 'active-tab']}
-      >{tile.titles[i]}</span
-    >
+    {tile.titles[i]}
     <button
       class="button"
       onclick={(e) => {
@@ -271,7 +313,6 @@
     <button
       class="button"
       onclick={async () => {
-        console.log($state.snapshot(selected));
         const titleStart = selected.id.lastIndexOf('/');
         const link = await createReplLink(
           selected.id.slice(titleStart + 1, -7),
@@ -297,7 +338,12 @@
   <MaterialIconThemeSvelte />
 {/snippet}
 
-{#snippet leaf(tile: Tiles['leaf'])}
+{#snippet leaf(tile: Tiles['leaf'], _: number, p: Tile | undefined)}
+  {@const handleClick = () => {
+    if (p?.type === 'tabs') {
+      activeTabsId = p.id;
+    }
+  }}
   {#if tile.name === 'sidebar'}
     <Sidebar>
       {#each tree as node (node.id)}
@@ -305,7 +351,13 @@
       {/each}
     </Sidebar>
   {:else if tile.name.startsWith('example:')}
-    <div class="example">
+    <div
+      class="example"
+      role="tabpanel"
+      onkeydown={handleKeydown}
+      onclick={handleClick}
+      tabindex="0"
+    >
       {#await examples[tile.name.slice(8)]() then Example}
         <Example />
       {/await}
@@ -313,6 +365,10 @@
   {:else}
     <div
       class={getFileExtension(tile.name) === 'md' ? 'content' : 'code-preview'}
+      role="tabpanel"
+      onkeydown={handleKeydown}
+      onclick={handleClick}
+      tabindex="0"
     >
       {#await files[tile.name]() then content}
         {@html content}
@@ -325,10 +381,6 @@
   .app {
     width: 100%;
     height: 100vh;
-  }
-
-  .active-tab {
-    font-weight: 600;
   }
 
   .example {

@@ -1,4 +1,5 @@
 import { createContext } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
 
 import { DndContext } from './shared/dnd.svelte.ts';
 
@@ -38,7 +39,7 @@ export class TilerContext {
   protected registry = new FinalizationRegistry<string>((id) => {
     this.tiles.delete(id);
   });
-  protected tiles = new Map<string, WeakRef<Tile>>();
+  protected tiles = new SvelteMap<string, WeakRef<Tile>>();
   protected parents = new WeakMap<Tile, Tile>();
 
   readonly dnd: DndContext<Tile>;
@@ -62,6 +63,10 @@ export class TilerContext {
     }
   }
 
+  getTileById(tileId: string) {
+    return this.tiles.get(tileId)?.deref();
+  }
+
   getTileComponent(tile: Tile) {
     return this.definitions[tile.type].default;
   }
@@ -82,7 +87,7 @@ export class TilerContext {
   }
 
   replaceTile(tileId: string | undefined, replace: Tile) {
-    const tile = tileId && this.getTileById(tileId);
+    const tile = tileId && this.getTileByIdOrThrow(tileId);
     this.replace(tile || undefined, replace);
   }
 
@@ -100,7 +105,7 @@ export class TilerContext {
     index: number,
     data: TileInsertData<T>
   ) {
-    const tile = this.getTileById(tileId);
+    const tile = this.getTileByIdOrThrow(tileId);
     if (tile.type !== type) {
       throw new Error(
         `Tile type mismatch: expected "${type}", but got "${tile.type}"`
@@ -114,7 +119,7 @@ export class TilerContext {
   }
 
   removeChildFromTile(tileId: string, index: number) {
-    this.removeChildFrom(this.getTileById(tileId), index);
+    this.removeChildFrom(this.getTileByIdOrThrow(tileId), index);
   }
 
   remove(tile: Tile) {
@@ -131,10 +136,10 @@ export class TilerContext {
   }
 
   removeTile(tileId: string) {
-    this.remove(this.getTileById(tileId));
+    this.remove(this.getTileByIdOrThrow(tileId));
   }
 
-  protected getTileById(tileId: string) {
+  protected getTileByIdOrThrow(tileId: string) {
     const tile = this.tiles.get(tileId)?.deref();
     if (tile === undefined) {
       throw new Error(`Unable to find tile with "${tileId}" id`);
