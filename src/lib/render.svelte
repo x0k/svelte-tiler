@@ -17,8 +17,6 @@
 
   $effect(() => ctx.registerTile(tile, parent ?? ((t) => (parent = t))));
 
-  $effect(() => ctx.getTileEffect(tile)?.(tile as never));
-
   const TileComponent = $derived(ctx.getTileComponent(tile));
 </script>
 

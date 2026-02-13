@@ -26,19 +26,13 @@ export interface TileDefinition<T extends TileType> {
 
 export type TileDefinitions = { [T in TileType]: TileDefinition<T> };
 
-export type TileEffects = {
-  [T in TileType]?: (tile: Tiles[T]) => void | (() => void);
-};
-
 export interface TilerContextOptions {
   definitions: TileDefinitions;
   dnd?: DndContext<Tile>;
-  effects?: TileEffects;
 }
 
 export class TilerContext {
   protected definitions: TileDefinitions;
-  protected effects: TileEffects;
   protected updateRootFn: ((tile: Tile) => void) | undefined;
 
   protected registry = new FinalizationRegistry<string>((id) => {
@@ -52,10 +46,12 @@ export class TilerContext {
   constructor(options: TilerContextOptions) {
     this.definitions = options.definitions;
     this.dnd = options.dnd ?? new DndContext();
-    this.effects = options.effects ?? {};
   }
 
-  registerTile(tile: Tile, parent: Tile | ((tile: Tile) => void)) {
+  registerTile(
+    tile: Tile,
+    parent: Tile | ((tile: Tile) => void)
+  ): (() => void) | void {
     this.tiles.set(tile.id, new WeakRef(tile));
     this.registry.register(tile, tile.id);
     if (typeof parent === 'function') {
@@ -64,10 +60,6 @@ export class TilerContext {
     } else {
       this.parents.set(tile, parent);
     }
-  }
-
-  getTileEffect(tile: Tile) {
-    return this.effects[tile.type];
   }
 
   getTileComponent(tile: Tile) {

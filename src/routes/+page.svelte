@@ -64,7 +64,6 @@
     query: '?example',
   }) as Record<string, () => Promise<string>>;
 
-  let activeTabs = $state.raw<Tiles['tabs'] | undefined>();
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
     feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
@@ -84,13 +83,6 @@
   const ctx = new CustomTilerContext({
     dnd,
     definitions: { split: Split, leaf: Leaf, tabs: Tabs },
-    effects: {
-      tabs: (tile) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        tile.selectedTab;
-        activeTabs = tile;
-      },
-    },
   });
   setTilerContext(ctx);
 
@@ -217,6 +209,11 @@
       },
     });
   }
+
+  // svelte-ignore state_referenced_locally
+  let activeTabs = $state.raw<Tiles['tabs'] | undefined>(
+    layout.children[1] as Tiles['tabs']
+  );
 
   function onFileClick(node: FileNode) {
     if (!activeTabs) {
