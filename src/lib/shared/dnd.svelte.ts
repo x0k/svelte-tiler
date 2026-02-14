@@ -78,7 +78,7 @@ export class Draggable<D = unknown> {
     protected readonly options: DraggableOptions<D> = {}
   ) {
     this.register = this.register.bind(this);
-    this.registerHandel = this.registerHandel.bind(this);
+    this.registerHandle = this.registerHandle.bind(this);
   }
 
   get isDragged() {
@@ -103,7 +103,7 @@ export class Draggable<D = unknown> {
     };
   }
 
-  registerHandel(el: HTMLElement) {
+  registerHandle(el: HTMLElement) {
     this[Symbol.dispose]();
     this.addEventHandlers(el);
     this.#hasHandel = true;

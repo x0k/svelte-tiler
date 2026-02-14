@@ -126,7 +126,7 @@
 
 {#snippet gripperIcon(d: Draggable<Tile>)}
   <svg
-    {@attach d.registerHandel}
+    {@attach d.registerHandle}
     xmlns="http://www.w3.org/2000/svg"
     width="16"
     height="16"
