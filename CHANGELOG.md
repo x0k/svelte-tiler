@@ -1,5 +1,15 @@
 # svelte-tiler
 
+## 0.5.0
+
+### Minor Changes
+
+- [BREAKING] Fix typo `registerHandel` -> `registerHandle` ([`d2d6a07`](https://github.com/x0k/svelte-tiler/commit/d2d6a0704126ff47705b1cdabcac19d292605246))
+
+### Patch Changes
+
+- Fix unsubscribing from events when using `draggable.registerHandle` ([`35c3168`](https://github.com/x0k/svelte-tiler/commit/35c3168ab929392906986067f4090275c3d56694))
+
 ## 0.4.0
 
 ### Minor Changes
