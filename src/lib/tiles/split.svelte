@@ -81,6 +81,14 @@
     return create<R>;
   }
 
+  function sumOf(arr: number[]) {
+    let s = 0;
+    for (let i = 0; i < arr.length; i++) {
+      s += arr[i];
+    }
+    return s;
+  }
+
   export function onRemoveChild(
     ctx: TilerContext,
     tile: Tiles['split'],
@@ -104,6 +112,11 @@
       tile.children.splice(i, 1);
       tile.weights.splice(i, 1);
       tile.constraints.splice(i, 1);
+      while (sumOf(tile.weights) < 1) {
+        for (let i = 0; i < tile.weights.length; i++) {
+          tile.weights[i] *= 2;
+        }
+      }
       return;
     }
     ctx.remove(tile);
@@ -254,17 +267,9 @@
   }
 
   function applyNextLayout() {
-    for (let j = 0; j < len; j++) {
-      tile.weights[j] = nextLayout[j];
+    for (let i = 0; i < len; i++) {
+      tile.weights[i] = nextLayout[i];
     }
-  }
-
-  function sumOf(arr: number[]) {
-    let s = 0;
-    for (let i = 0; i < arr.length; i++) {
-      s += arr[i];
-    }
-    return s;
   }
 
   function expand(weight: number, j: number) {
@@ -354,12 +359,6 @@
         if (almostEqual(snapshottedWeight, sumOf(nextLayout))) {
           applyNextLayout();
         }
-      }
-    }
-
-    protected onStop() {
-      for (let j = 0; j < len; j++) {
-        tile.weights[j] = Number.parseFloat(tile.weights[j].toFixed(3));
       }
     }
 

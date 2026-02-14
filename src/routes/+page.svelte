@@ -78,7 +78,7 @@
         onRemoveChild(ctx, tile, index) {
           const c = tile.children[index];
           if (tile.id === layout.id && c.type === 'tabs') {
-            Tabs.onClear(ctx, c)
+            Tabs.onClear(ctx, c);
             return;
           }
           if (c.id === activeTabsId) {
@@ -100,7 +100,6 @@
 
   const defaultConstraints: Constraint[] = [
     { type: 'minSize', unit: 'px', value: 160 },
-    { type: 'minSize', unit: 'weight', value: 0.2 },
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
   function isExamplePath(path: string) {
