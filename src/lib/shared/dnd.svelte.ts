@@ -1,6 +1,5 @@
 import { flushSync } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
-import { on } from 'svelte/events';
 
 import type { MutableRegistry } from './registry.ts';
 
@@ -67,8 +66,7 @@ export interface DraggableOptions<D> {
 }
 
 export class Draggable<D = unknown> {
-  #disposePointerDownHandler: (() => void) | undefined;
-  #disposeClickHandler: (() => void) | undefined;
+  #abortController = new AbortController();
   #didDrag = false;
   #baseElement: HTMLElement | undefined;
   #hasHandel = false;
@@ -116,8 +114,8 @@ export class Draggable<D = unknown> {
   }
 
   [Symbol.dispose]() {
-    this.#disposeClickHandler?.();
-    this.#disposePointerDownHandler?.();
+    this.#abortController.abort();
+    this.#abortController = new AbortController();
   }
 
   protected onStart(_e: PointerEvent, _el: HTMLElement) {}
@@ -127,11 +125,17 @@ export class Draggable<D = unknown> {
   protected onStop(_e: StopEvent) {}
 
   protected addEventHandlers(el: HTMLElement) {
-    this.#disposePointerDownHandler = on(el, 'pointerdown', (e) =>
-      this.pointerDownHandler(e)
+    el.addEventListener(
+      'pointerdown',
+      (e) =>
+        this.pointerDownHandler(
+          e as PointerEvent & {
+            currentTarget: HTMLElement;
+          }
+        ),
+      this.#abortController
     );
-    this.#disposeClickHandler = on(
-      el,
+    el.addEventListener(
       'click',
       (e) => {
         if (!this.#didDrag) {
@@ -141,7 +145,7 @@ export class Draggable<D = unknown> {
         e.preventDefault();
         this.#didDrag = false;
       },
-      { capture: true }
+      { capture: true, signal: this.#abortController.signal }
     );
   }
 
