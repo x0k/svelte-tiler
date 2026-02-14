@@ -69,18 +69,7 @@
     feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
   });
 
-  class CustomTilerContext extends TilerContext {
-    removeChildFrom(tile: Tile, index: number): void {
-      if (tile.id === layout.id) {
-        const child = tile.children[index];
-        this.definitions[child.type].onClear(this, child as never);
-        return;
-      }
-      super.removeChildFrom(tile, index);
-    }
-  }
-
-  const ctx = new CustomTilerContext({
+  const ctx = new TilerContext({
     dnd,
     definitions: {
       leaf: Leaf,
@@ -88,6 +77,10 @@
         ...Split,
         onRemoveChild(ctx, tile, index) {
           const c = tile.children[index];
+          if (tile.id === layout.id && c.type === 'tabs') {
+            Tabs.onClear(ctx, c)
+            return;
+          }
           if (c.id === activeTabsId) {
             activeTabsId = tile.children[index > 0 ? index - 1 : 1].id;
           }
@@ -106,7 +99,7 @@
   setTilerContext(ctx);
 
   const defaultConstraints: Constraint[] = [
-    { type: 'minSize', unit: 'px', value: 80 },
+    { type: 'minSize', unit: 'px', value: 160 },
     { type: 'minSize', unit: 'weight', value: 0.2 },
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
