@@ -64,17 +64,19 @@
       const tiles = new Array<Split.SplitTileOptions>(2);
       tiles[1 - offset] = { tile: pivot, constraints: defaultConstraints };
       tiles[offset] = { tile: adjacent, constraints: defaultConstraints };
-      ctx.replace(
-        parent && parent.children.length > 1 ? pivot : parent,
-        Split.create({
-          direction: type,
-          children: tiles,
-          gapPx: splitGapPx,
-        })
-      );
+      const split = Split.create({
+        direction: type,
+        children: tiles,
+        gapPx: splitGapPx,
+      });
+      if (parent) {
+        ctx.replace(parent.children.length > 1 ? pivot : parent, split);
+      } else {
+        layout = split
+      }
     },
   });
-  let layout = $state(
+  let layout: Tile = $state(
     createTabs({
       tabs: [],
       actions: 'editorActions',

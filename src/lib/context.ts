@@ -34,13 +34,13 @@ export interface TilerContextOptions {
 
 export class TilerContext {
   protected definitions: TileDefinitions;
-  protected updateRootFn: ((tile: Tile) => void) | undefined;
 
   protected registry = new FinalizationRegistry<string>((id) => {
     this.tiles.delete(id);
   });
   protected tiles = new SvelteMap<string, WeakRef<Tile>>();
   protected parents = new WeakMap<Tile, Tile>();
+  protected replacers = new WeakMap<Tile, (tile: Tile) => void>();
 
   readonly dnd: DndContext<Tile>;
 
@@ -57,8 +57,9 @@ export class TilerContext {
     this.registry.register(tile, tile.id);
     if (typeof parent === 'function') {
       this.parents.delete(tile);
-      this.updateRootFn = parent;
+      this.replacers.set(tile, parent);
     } else {
+      this.replacers.delete(tile);
       this.parents.set(tile, parent);
     }
   }
@@ -71,24 +72,25 @@ export class TilerContext {
     return this.definitions[tile.type].default;
   }
 
-  replace(tile: Tile | undefined, replace: Tile) {
-    if (tile) {
-      const parent = this.parents.get(tile);
-      if (parent) {
-        const index = parent.children.findIndex((c) => c.id === tile.id);
-        if (index < 0) {
-          throw new Error(`Invalid parent for "${tile.id}" tile`);
-        }
-        parent.children[index] = replace;
-        return;
+  replace(tile: Tile, replace: Tile) {
+    const parent = this.parents.get(tile);
+    if (parent) {
+      const index = parent.children.findIndex((c) => c.id === tile.id);
+      if (index < 0) {
+        throw new Error(`Invalid parent for "${tile.id}" tile`);
       }
+      parent.children[index] = replace;
+      return;
     }
-    this.updateRootFn?.(replace);
+    const replacer = this.replacers.get(tile);
+    if (!replacer) {
+      throw new Error(`Unregistered tile: "${tile.id}"`);
+    }
+    replacer(replace);
   }
 
-  replaceTile(tileId: string | undefined, replace: Tile) {
-    const tile = tileId && this.getTileByIdOrThrow(tileId);
-    this.replace(tile || undefined, replace);
+  replaceTile(tileId: string, replace: Tile) {
+    this.replace(this.getTileByIdOrThrow(tileId), replace);
   }
 
   insertInto<T extends TileType>(
