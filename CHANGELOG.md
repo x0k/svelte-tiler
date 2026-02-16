@@ -1,5 +1,15 @@
 # svelte-tiler
 
+## 0.6.0
+
+### Minor Changes
+
+- [BREAKING] Allow multiple roots ([#17](https://github.com/x0k/svelte-tiler/pull/17))
+
+### Patch Changes
+
+- Add a button to copy tile code ([`b6f3dba`](https://github.com/x0k/svelte-tiler/commit/b6f3dba76908f9f5d434ecd6874d4a0bd315a30f))
+
 ## 0.5.0
 
 ### Minor Changes
