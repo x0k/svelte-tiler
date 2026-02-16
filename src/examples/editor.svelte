@@ -72,7 +72,7 @@
       if (parent) {
         ctx.replace(parent.children.length > 1 ? pivot : parent, split);
       } else {
-        layout = split
+        layout = split;
       }
     },
   });
