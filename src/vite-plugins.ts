@@ -10,6 +10,15 @@ import json from '@shikijs/langs/json';
 import { createHighlighterCoreSync } from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import { marked } from 'marked';
+import markedAlert from 'marked-alert';
+import { parse, print } from 'svelte/compiler';
+import { format } from 'prettier';
+
+import { transformTileImports } from './transform-tile-imports.ts';
+
+const prettierConfig = readFile(path.join(__dirname, '..', '.prettierrc')).then(
+  (f) => JSON.parse(f.toString())
+);
 
 const shiki = createHighlighterCoreSync({
   themes: [monokai],
@@ -17,7 +26,7 @@ const shiki = createHighlighterCoreSync({
   engine: createJavaScriptRegexEngine(),
 });
 
-marked.use({
+marked.use(markedAlert()).use({
   renderer: {
     code({ text, lang }) {
       return shiki.codeToHtml(text, {
@@ -69,7 +78,13 @@ export function shikiImport(): Plugin {
         if (lang === 'svelte' && filePath.includes('/src/examples/')) {
           code = fixImportsAndStyles(code);
         }
-        const highlighted = shiki.codeToHtml(code, { lang, theme: 'monokai' });
+        // if (lang === 'svelte' && filePath.includes('/src/lib/tiles/')) {
+        //   code = await fixTileImports(code);
+        // }
+        const highlighted = shiki.codeToHtml(code, {
+          lang,
+          theme: 'monokai',
+        });
         return `export default ${JSON.stringify(highlighted)};`;
       } catch (error) {
         this.error(`Failed to highlight file: ${filePath}\n${error}`);
@@ -106,7 +121,9 @@ export function exampleImport(): Plugin {
       const filePath = id.slice(virtualModulePrefix.length, -11);
       try {
         const content = await readFile(filePath, 'utf-8');
-        const fixed = fixImportsAndStyles(content);
+        const fixed = await (
+          filePath.includes('lib/tiles/') ? fixTileImports : fixImportsAndStyles
+        )(content);
         return `export default ${JSON.stringify(fixed)};`;
       } catch (error) {
         this.error(`Failed to fix example file: ${filePath}\n${error}`);
@@ -141,4 +158,28 @@ function fixImportsAndStyles(code: string): string {
     .replaceAll('/index.js', '')
     .replaceAll('.js', '')
     .replaceAll(':global .example', ':global');
+}
+
+async function fixTileImports(code: string): Promise<string> {
+  const ast = parse(code, { modern: true });
+  if (ast.module) {
+    ast.module.content = transformTileImports(ast.module.content);
+  }
+  if (ast.instance) {
+    ast.instance.content = transformTileImports(ast.instance.content);
+  }
+  const transformed = print(ast)
+    .code.replace('../model.js', 'svelte-tiler')
+    // TODO: It seems that the print statement is missing the keyword `module`.
+    // Remove this line when the problem is fixed.
+    .replace("declare 'svelte-tiler'", "declare module 'svelte-tiler'")
+    // Svelte print is crazy
+    .replaceAll(';}', '}')
+    // WHY ARE YOU DOING THIS
+    .replaceAll(/\[(\w+)\s+extends\s+keyof\s+([^\]]+)\]/g, '[$1 in keyof $2]');
+  const config = await prettierConfig;
+  return format(transformed, {
+    ...config,
+    parser: 'svelte',
+  });
 }

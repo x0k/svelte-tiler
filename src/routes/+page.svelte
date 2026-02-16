@@ -5,6 +5,7 @@
   import CodiconCloseAll from '~icons/codicon/close-all';
   import MaterialIconThemeSvelte from '~icons/material-icon-theme/svelte';
   import CodiconLinkExternal from '~icons/codicon/link-external';
+  import CodiconCopy from '~icons/codicon/copy';
 
   import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import type { Constraint } from '$lib/shared/constraints.js';
@@ -35,6 +36,7 @@
   import FileIcon from './components/file-icon.svelte';
   import ExplorerNode from './components/explorer-node.svelte';
   import { createReplLink } from './repl.ts';
+  import { copyTextToClipboard } from './clipboard.ts';
 
   const files = Object.assign(
     import.meta.glob(['./docs/*', './*.md'], {
@@ -58,11 +60,14 @@
     base: '../',
     import: 'default',
   }) as Record<string, () => Promise<Component>>;
-  const exampleContents = import.meta.glob('./examples/*', {
-    base: '../',
-    import: 'default',
-    query: '?example',
-  }) as Record<string, () => Promise<string>>;
+  const exampleContents = import.meta.glob(
+    ['./examples/*', './lib/tiles/*.svelte'],
+    {
+      base: '../',
+      import: 'default',
+      query: '?example',
+    }
+  ) as Record<string, () => Promise<string>>;
 
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
@@ -103,7 +108,12 @@
   ];
   const createLeaf = Leaf.setup(fromConstant(leaf));
   function isExamplePath(path: string) {
-    return path.startsWith('./examples') && getFileExtension(path) === 'svelte';
+    return (
+      path.startsWith('./examples/') && getFileExtension(path) === 'svelte'
+    );
+  }
+  function isTilePath(path: string) {
+    return path.startsWith('./lib/tiles/');
   }
   function createFileLeaf(path: string) {
     const leaf = isExamplePath(path)
@@ -308,20 +318,37 @@
 {/snippet}
 
 {#snippet actions(tile: Tiles['tabs'])}
-  {@const selected: Tile | undefined = $state.snapshot(tile.children[tile.selectedTab])}
+  {@const selected: Tile | undefined = tile.children[tile.selectedTab]}
   {#if selected && isExamplePath(selected.id)}
     <button
       class="button"
       onclick={async () => {
-        const titleStart = selected.id.lastIndexOf('/');
+        const id = selected.id;
+        const titleStart = id.lastIndexOf('/');
         const link = await createReplLink(
-          selected.id.slice(titleStart + 1, -7),
-          await exampleContents[selected.id]()
+          id.slice(titleStart + 1, -7),
+          await exampleContents[id]()
         );
         window.open(link, '_blank');
       }}
     >
       <CodiconLinkExternal />
+    </button>
+  {:else if selected && isTilePath(selected.id)}
+    <button
+      class="button"
+      onclick={async () => {
+        const content = await exampleContents[selected.id]();
+        try {
+          await copyTextToClipboard(content);
+          window.alert('Text copied!');
+        } catch (err) {
+          console.error(err);
+          window.alert('An error occurred while copying!');
+        }
+      }}
+    >
+      <CodiconCopy />
     </button>
   {/if}
   <button
