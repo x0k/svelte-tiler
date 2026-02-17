@@ -540,7 +540,7 @@
     splitClientWidth = el.clientWidth;
   }}
   bind:clientHeight={splitClientHeight}
-  bind:clientWidth={splitClientHeight}
+  bind:clientWidth={splitClientWidth}
   data-split
   style="--gap: {tile.gapPx}px; --st-split-gap: {tile.gapPx}px;"
   data-dir={tile.direction}
