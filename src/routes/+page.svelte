@@ -143,11 +143,8 @@
       empty,
     }),
     applySplit({ parent, type, pivot, adjacent, offset }) {
-      if (!parent) {
-        return;
-      }
       if (
-        parent.type === 'split' &&
+        parent?.type === 'split' &&
         parent.direction === type &&
         parent.id !== layout.id
       ) {
@@ -163,7 +160,7 @@
       tiles[1 - offset] = { tile: pivot, constraints: defaultConstraints };
       tiles[offset] = { tile: adjacent, constraints: defaultConstraints };
       ctx.replace(
-        parent.children.length > 1 ? pivot : parent,
+        parent && parent.children.length < 2 ? parent : pivot,
         Split.create({
           direction: type,
           children: tiles,
