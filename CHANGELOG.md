@@ -1,5 +1,11 @@
 # svelte-tiler
 
+## 0.6.1
+
+### Patch Changes
+
+- Fix split width binding ([`42b0544`](https://github.com/x0k/svelte-tiler/commit/42b0544d8b87048bcc4fac2685a70070424894f3))
+
 ## 0.6.0
 
 ### Minor Changes
