@@ -66,7 +66,7 @@ npm i svelte-tiler
 
 This section explains the conceptual model behind the library and how its core pieces fit together.
 
-## Tile
+### Tile
 
 A **Tile** is the fundamental unit of the system. Everything in the layout is represented as a tree of tiles.
 
