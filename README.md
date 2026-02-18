@@ -143,34 +143,27 @@ For example, a Tabs tile may decide that when its last child is removed, it shou
 
 This design keeps structural semantics inside the tile while the context provides the mutation primitives.
 
-### Layout
+## Layout
 
-A **Layout** is a reactive composition of tiles.
+A **Layout** is a state tree that describes the UI structure.
 
-Tiles form a tree structure that represents the entire UI arrangement. Mutations to the tree update the rendered structure reactively.
+Tiles form a hierarchical tree representing the entire arrangement.
+Mutations to this tree update the rendered structure reactively.
 
-To help construct layouts, tiles typically export:
+Standard tiles are designed so that layouts remain fully serializable.
+To support the serializable pattern, tiles typically export:
 
-- `create` - creates a serializable tile instance
-- `setup` - configures runtime dependencies
+- `setup` - installs runtime data into context and returns a parameterized `create` function.
+- `create` - produces tile data used in the layout.
 
-### Serialization Model
+Example:
 
-Standard tiles are designed to keep the layout **fully serializable**.
-
-Non-serializable data must be injected via context rather than stored in the tile itself.
-
-The common pattern:
-
-- `setup` configures context with non-serializable dependencies
-- It returns a parameterized `create` function
-- `create` produces serializable tile data
-
-This preserves:
-
-- Deterministic layout state
-- Safe persistence
-- Type safety
+```ts
+export function setup<R extends string>(ctx: SplitContext<R>) {
+  setContext(SPLIT_CONTEXT_KEY, ctx);
+  return create<R>;
+}
+```
 
 ### Context
 
