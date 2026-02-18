@@ -375,7 +375,6 @@
       {/each}
     </Sidebar>
   {:else if tile.name.startsWith('example:')}
-    {@const Example = await examples[tile.name.slice(8)]()}
     <div
       class="example"
       role="tabpanel"
@@ -383,7 +382,9 @@
       onclick={handleClick}
       tabindex="0"
     >
-      <Example />
+      {#await examples[tile.name.slice(8)]() then Example}
+        <Example />
+      {/await}
     </div>
   {:else}
     <div
@@ -393,7 +394,9 @@
       onclick={handleClick}
       tabindex="0"
     >
-      {@html await files[tile.name]()}
+      {#await files[tile.name]() then content}
+        {@html content}
+      {/await}
     </div>
   {/if}
 {/snippet}
