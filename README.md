@@ -143,7 +143,7 @@ For example, a Tabs tile may decide that when its last child is removed, it shou
 
 This design keeps structural semantics inside the tile while the context provides the mutation primitives.
 
-## Layout
+### Layout
 
 A **Layout** is a state tree that describes the UI structure.
 
