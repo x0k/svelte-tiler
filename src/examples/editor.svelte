@@ -7,7 +7,7 @@
   import {
     ClonedGhost,
     DndContext,
-    Draggable,
+    DragSource,
   } from '$lib/shared/dnd.svelte.js';
   import {
     Panel,
@@ -124,7 +124,7 @@
   >
 {/snippet}
 
-{#snippet gripperIcon(d: Draggable<Tile>)}
+{#snippet gripperIcon(d: DragSource<Tile>)}
   <svg
     {@attach d.registerHandle}
     xmlns="http://www.w3.org/2000/svg"
@@ -142,7 +142,7 @@
   props: HTMLAttributes<HTMLElement>,
   tile: Tiles['tabs'],
   i: number,
-  d: Draggable<Tile>
+  d: DragSource<Tile>
 )}
   <div {...props}>
     {@render gripperIcon(d)}

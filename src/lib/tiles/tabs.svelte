@@ -3,7 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements';
   import { createAttachmentKey } from 'svelte/attachments';
 
-  import type { Draggable } from '$lib/shared/dnd.svelte.js';
+  import type { Draggable, DragSource } from '$lib/shared/dnd.svelte.js';
   import type { Registry } from '$lib/shared/registry.js';
   import {
     insertWithDeduplication,
@@ -92,7 +92,7 @@
     headers?: Registry<
       H,
       | Snippet<
-          [HTMLAttributes<HTMLElement>, Tiles['tabs'], number, Draggable<Tile>]
+          [HTMLAttributes<HTMLElement>, Tiles['tabs'], number, DragSource<Tile>]
         >
       | undefined
     >;
@@ -176,7 +176,7 @@
   );
 
   class TabsTileDropTarget extends TileDropTarget<Tiles['tabs']> {
-    accepts(d: Draggable<Tile>): d is Draggable<Tiles['tabs']> {
+    accepts(d: DragSource<Tile>): d is DragSource<Tiles['tabs']> {
       const t = d.data;
       return (
         t?.type === 'tabs' &&
@@ -191,7 +191,7 @@
   }
 
   class SimpleTabsDropTarget extends TabsTileDropTarget {
-    protected onDrop(tabs: Tiles['tabs']): void {
+    onDrop(tabs: Tiles['tabs']): void {
       ctx.insertInto<'tabs'>(tile, tile.children.length, tabs);
     }
   }
@@ -225,7 +225,7 @@
       this.#index = index;
     }
 
-    protected onDrop(tabs: Tiles['tabs'], d: Draggable): void {
+    onDrop(tabs: Tiles['tabs'], d: Draggable): void {
       let i = tile.children.findIndex((c) => c.id === this.#id);
       if (i < 0) {
         i = this.#index;
@@ -250,7 +250,7 @@
       return this.isCenter ? tile.id : parent?.id;
     }
 
-    protected onDrop(tabs: Tiles['tabs'], d: Draggable): void {
+    onDrop(tabs: Tiles['tabs'], d: Draggable): void {
       const id = tabs.children[0].id;
       if (this.isCenter) {
         let i = tile.children.findIndex((t) => t.id === id);

@@ -3,11 +3,6 @@ import { SvelteMap } from 'svelte/reactivity';
 
 import type { MutableRegistry } from './registry.ts';
 
-const ON_ENTER = Symbol('on-enter-key');
-const ON_MOVE = Symbol('on-move-key');
-const ON_LEAVE = Symbol('on-leave-key');
-const ON_DROP = Symbol('on-drop-key');
-
 export type FeedbackFactory = (
   e: PointerEvent,
   el: HTMLElement
@@ -19,6 +14,29 @@ export interface DndContextOptions {
   feedback?: FeedbackFactory;
 }
 
+export interface DndPlugin<T> {
+  onStart(e: PointerEvent, draggable: Draggable<T>): void;
+  onMove(e: PointerEvent): void;
+  onStop(e: StopEvent): void;
+}
+
+export interface Draggable<T = unknown> extends DndPlugin<T> {
+  id: string;
+  element: HTMLElement;
+  handle: HTMLElement | undefined;
+  data: T | undefined;
+}
+
+export interface Droppable<D = unknown, T extends D = D> {
+  id: string;
+  element: HTMLElement;
+  accepts(draggable: Draggable<D>): draggable is Draggable<T>;
+  onEnter(): void;
+  onMove(e: PointerEvent): void;
+  onLeave(): void;
+  onDrop(data: T, draggable: Draggable<T>): void;
+}
+
 export class DndContext<D = unknown> {
   readonly feedback: FeedbackFactory;
 
@@ -26,6 +44,7 @@ export class DndContext<D = unknown> {
     this.feedback = options.feedback ?? (() => undefined);
   }
 
+  #didDrag = false;
   #droppables = new SvelteMap<string, Droppable<D, any>>();
 
   sourceId: string | undefined = $state.raw();
@@ -35,7 +54,126 @@ export class DndContext<D = unknown> {
     return this.#droppables;
   }
 
-  findDroppable(
+  beginDrag(draggable: Draggable<D>, event: PointerEvent) {
+    if (
+      event.button !== 0 ||
+      !event.isPrimary ||
+      event.composedPath().some((n) => n instanceof HTMLButtonElement)
+    ) {
+      return;
+    }
+
+    const el = draggable.element;
+
+    el.setPointerCapture(event.pointerId);
+
+    const abortController = new AbortController();
+
+    let feedback:
+      | {
+          onMove: (e: PointerEvent) => void;
+          onStop: (e: StopEvent) => void;
+        }
+      | undefined;
+
+    let activeDroppable: Droppable<D, any> | undefined;
+    const handleMove = (e: PointerEvent) => {
+      if (e.pointerId !== event.pointerId) {
+        return;
+      }
+
+      if (!this.#didDrag) {
+        const dx = e.clientX - event.clientX;
+        const dy = e.clientY - event.clientY;
+        if (dx * dx + dy * dy < 16) {
+          return;
+        }
+        this.#didDrag = true;
+        this.sourceId = draggable.id;
+        feedback = this.feedback(e, draggable.handle ?? el);
+        draggable.onStart(e, draggable);
+      }
+
+      draggable.onMove(e);
+
+      feedback?.onMove(e);
+
+      const nextDroppable = this.findDroppable(e.clientX, e.clientY, draggable);
+      if (activeDroppable !== nextDroppable) {
+        activeDroppable?.onLeave();
+        nextDroppable?.onEnter();
+        activeDroppable = nextDroppable;
+        this.targetId = activeDroppable?.id;
+      }
+      activeDroppable?.onMove(e);
+    };
+
+    const handleStop = (ev: StopEvent) => {
+      el.releasePointerCapture(event.pointerId);
+      abortController.abort();
+
+      if (!this.#didDrag) {
+        return;
+      }
+
+      const snap =
+        ev.reason === 'drop' ? $state.snapshot(draggable.data) : undefined;
+      activeDroppable?.onLeave();
+
+      feedback?.onStop(ev);
+
+      draggable.onStop(ev);
+
+      if (ev.reason === 'drop') {
+        flushSync(() => {
+          activeDroppable?.onDrop(snap, draggable);
+        });
+      }
+
+      this.targetId = undefined;
+      this.sourceId = undefined;
+      setTimeout(() => {
+        this.#didDrag = false;
+      });
+    };
+
+    function onKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        handleStop({ reason: 'cancel' });
+      }
+    }
+
+    window.addEventListener('pointermove', handleMove, abortController);
+    window.addEventListener(
+      'pointerup',
+      (e) => {
+        if (e.pointerId !== event.pointerId) {
+          return;
+        }
+        handleStop({
+          reason: activeDroppable === undefined ? 'cancel' : 'drop',
+        });
+      },
+      abortController
+    );
+    window.addEventListener('keydown', onKeydown, abortController);
+    window.addEventListener(
+      'contextmenu',
+      () => handleStop({ reason: 'cancel' }),
+      abortController
+    );
+  }
+
+  preventClick(e: PointerEvent) {
+    if (!this.#didDrag) {
+      return;
+    }
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    this.#didDrag = false;
+  }
+
+  private findDroppable(
     x: number,
     y: number,
     draggable: Draggable<D>
@@ -65,11 +203,10 @@ export interface DraggableOptions<D> {
   data?: D;
 }
 
-export class Draggable<D = unknown> {
+export class DragSource<D = unknown> {
   #abortController = new AbortController();
-  #didDrag = false;
   #baseElement: HTMLElement | undefined;
-  #hasHandel = false;
+  #handleElement: HTMLElement | undefined;
 
   readonly id = crypto.randomUUID();
 
@@ -81,6 +218,14 @@ export class Draggable<D = unknown> {
     this.registerHandle = this.registerHandle.bind(this);
   }
 
+  get element() {
+    return this.#baseElement!;
+  }
+
+  get handle() {
+    return this.#handleElement;
+  }
+
   get isDragged() {
     return this.ctx.sourceId === this.id;
   }
@@ -90,14 +235,14 @@ export class Draggable<D = unknown> {
   }
 
   register(el: HTMLElement) {
-    if (!this.#hasHandel) {
+    if (!this.#handleElement) {
       this[Symbol.dispose]();
       this.addEventHandlers(el);
     }
     this.#baseElement = el;
     return () => {
       this.#baseElement = undefined;
-      if (!this.#hasHandel) {
+      if (!this.#handleElement) {
         this[Symbol.dispose]();
       }
     };
@@ -106,9 +251,9 @@ export class Draggable<D = unknown> {
   registerHandle(el: HTMLElement) {
     this[Symbol.dispose]();
     this.addEventHandlers(el);
-    this.#hasHandel = true;
+    this.#handleElement = el;
     return () => {
-      this.#hasHandel = false;
+      this.#handleElement = undefined;
       this[Symbol.dispose]();
     };
   }
@@ -118,152 +263,26 @@ export class Draggable<D = unknown> {
     this.#abortController = new AbortController();
   }
 
-  protected onStart(_e: PointerEvent, _el: HTMLElement) {}
+  onStart(_e: PointerEvent, _draggable: Draggable<D>) {}
 
-  protected onMove(_e: PointerEvent) {}
+  onMove(_e: PointerEvent) {}
 
-  protected onStop(_e: StopEvent) {}
+  onStop(_e: StopEvent) {}
 
   protected addEventHandlers(el: HTMLElement) {
     el.addEventListener(
       'pointerdown',
-      (e) =>
-        this.pointerDownHandler(
-          e as PointerEvent & {
-            currentTarget: HTMLElement;
-          }
-        ),
+      (e) => this.ctx.beginDrag(this, e),
       this.#abortController
     );
-    el.addEventListener(
-      'click',
-      (e) => {
-        if (!this.#didDrag) {
-          return;
-        }
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        this.#didDrag = false;
-      },
-      { capture: true, signal: this.#abortController.signal }
-    );
-  }
-
-  // NOTE: I believe this logic should be in `DndContext`, but it is difficult to
-  // separate and there is no specific reason to do so right now.
-  protected pointerDownHandler(
-    event: PointerEvent & {
-      currentTarget: HTMLElement;
-    }
-  ) {
-    if (
-      event.button !== 0 ||
-      !event.isPrimary ||
-      event.composedPath().some((n) => n instanceof HTMLButtonElement)
-    ) {
-      return;
-    }
-
-    const el = event.currentTarget;
-
-    el.setPointerCapture(event.pointerId);
-
-    const abortController = new AbortController();
-
-    let feedback:
-      | {
-          onMove: (e: PointerEvent) => void;
-          onStop: (e: StopEvent) => void;
-        }
-      | undefined;
-
-    let activeDroppable: Droppable<D, any> | undefined;
-    const handleMove = (e: PointerEvent) => {
-      if (e.pointerId !== event.pointerId) {
-        return;
-      }
-
-      if (!this.#didDrag) {
-        const dx = e.clientX - event.clientX;
-        const dy = e.clientY - event.clientY;
-        if (dx * dx + dy * dy < 16) {
-          return;
-        }
-        this.#didDrag = true;
-        this.ctx.sourceId = this.id;
-        feedback = this.ctx.feedback(e, this.#baseElement ?? el);
-        this.onStart(e, el);
-      }
-
-      this.onMove(e);
-
-      feedback?.onMove(e);
-
-      const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, this);
-      if (activeDroppable !== nextDroppable) {
-        activeDroppable?.[ON_LEAVE]();
-        nextDroppable?.[ON_ENTER]();
-        activeDroppable = nextDroppable;
-        this.ctx.targetId = activeDroppable?.id;
-      }
-      activeDroppable?.[ON_MOVE](e);
-    };
-
-    const handleStop = (ev: StopEvent) => {
-      el.releasePointerCapture(event.pointerId);
-      abortController.abort();
-
-      if (!this.#didDrag) {
-        return;
-      }
-
-      const snap =
-        ev.reason === 'drop' ? $state.snapshot(this.options.data) : undefined;
-      activeDroppable?.[ON_LEAVE]();
-
-      feedback?.onStop(ev);
-
-      this.onStop(ev);
-
-      if (ev.reason === 'drop') {
-        flushSync(() => {
-          activeDroppable?.[ON_DROP](snap, this);
-        });
-      }
-
-      this.ctx.targetId = undefined;
-      this.ctx.sourceId = undefined;
-    };
-
-    function onKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        handleStop({ reason: 'cancel' });
-      }
-    }
-
-    window.addEventListener('pointermove', handleMove, abortController);
-    window.addEventListener(
-      'pointerup',
-      (e) => {
-        if (e.pointerId !== event.pointerId) {
-          return;
-        }
-        handleStop({
-          reason: activeDroppable === undefined ? 'cancel' : 'drop',
-        });
-      },
-      abortController
-    );
-    window.addEventListener('keydown', onKeydown, abortController);
-    window.addEventListener(
-      'contextmenu',
-      () => handleStop({ reason: 'cancel' }),
-      abortController
-    );
+    el.addEventListener('click', (e) => this.ctx.preventClick(e), {
+      capture: true,
+      signal: this.#abortController.signal,
+    });
   }
 }
 
-export class Droppable<D = unknown, T extends D = D> {
+export class DropTarget<D = unknown, T extends D = D> {
   #element: HTMLElement | undefined = $state.raw();
 
   readonly id = crypto.randomUUID();
@@ -273,7 +292,7 @@ export class Droppable<D = unknown, T extends D = D> {
   }
 
   get element() {
-    return this.#element;
+    return this.#element!;
   }
 
   get isOver() {
@@ -294,33 +313,17 @@ export class Droppable<D = unknown, T extends D = D> {
     };
   }
 
-  accepts(draggable: Draggable<D>): draggable is Draggable<T> {
+  accepts(draggable: DragSource<D>): draggable is DragSource<T> {
     return true;
   }
 
-  [ON_ENTER]() {
-    this.onEnter();
-  }
+  onEnter() {}
 
-  [ON_MOVE](e: PointerEvent) {
-    this.onMove(e);
-  }
+  onMove(_e: PointerEvent) {}
 
-  [ON_LEAVE]() {
-    this.onLeave();
-  }
+  onLeave() {}
 
-  [ON_DROP](data: T, draggable: Draggable<T>) {
-    this.onDrop(data, draggable);
-  }
-
-  protected onEnter() {}
-
-  protected onMove(_e: PointerEvent) {}
-
-  protected onLeave() {}
-
-  protected onDrop(_data: T, _draggable: Draggable<T>) {}
+  onDrop(_data: T, _draggable: Draggable<T>) {}
 }
 
 export class ClonedGhost {
