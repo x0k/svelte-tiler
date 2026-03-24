@@ -6,6 +6,7 @@ import ts from '@shikijs/langs/typescript';
 import svelte from '@shikijs/langs/svelte';
 import monokai from '@shikijs/themes/monokai';
 import shellscript from '@shikijs/langs/shellscript';
+import diff from '@shikijs/langs/diff';
 import json from '@shikijs/langs/json';
 import { createHighlighterCoreSync } from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
@@ -22,7 +23,7 @@ const prettierConfig = readFile(path.join(__dirname, '..', '.prettierrc')).then(
 
 const shiki = createHighlighterCoreSync({
   themes: [monokai],
-  langs: [ts, svelte, shellscript, json],
+  langs: [ts, svelte, shellscript, json, diff],
   engine: createJavaScriptRegexEngine(),
 });
 
@@ -172,10 +173,8 @@ async function fixTileImports(code: string): Promise<string> {
     .code.replace('../model.js', 'svelte-tiler')
     // TODO: It seems that the print statement is missing the keyword `module`.
     // Remove this line when the problem is fixed.
+    // https://github.com/sveltejs/svelte/issues/17720
     .replace("declare 'svelte-tiler'", "declare module 'svelte-tiler'")
-    // Svelte print is crazy
-    .replaceAll(';}', '}')
-    // WHY ARE YOU DOING THIS
     .replaceAll(/\[(\w+)\s+extends\s+keyof\s+([^\]]+)\]/g, '[$1 in keyof $2]');
   const config = await prettierConfig;
   return format(transformed, {

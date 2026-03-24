@@ -7,7 +7,7 @@
   import {
     ClonedGhost,
     DndContext,
-    Draggable,
+    DragSource,
   } from '$lib/shared/dnd.svelte.js';
   import {
     Panel,
@@ -85,7 +85,13 @@
 
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
-    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
+    plugins: [
+      new ClonedGhost({
+        get portalTo() {
+          return portalEl;
+        },
+      }),
+    ],
   });
   const ctx = new TilerContext({
     dnd,
@@ -124,7 +130,7 @@
   >
 {/snippet}
 
-{#snippet gripperIcon(d: Draggable<Tile>)}
+{#snippet gripperIcon(d: DragSource<Tile>)}
   <svg
     {@attach d.registerHandle}
     xmlns="http://www.w3.org/2000/svg"
@@ -142,7 +148,7 @@
   props: HTMLAttributes<HTMLElement>,
   tile: Tiles['tabs'],
   i: number,
-  d: Draggable<Tile>
+  d: DragSource<Tile>
 )}
   <div {...props}>
     {@render gripperIcon(d)}

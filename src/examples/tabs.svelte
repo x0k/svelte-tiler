@@ -21,7 +21,13 @@
 
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
-    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
+    plugins: [
+      new ClonedGhost({
+        get portalTo() {
+          return portalEl;
+        },
+      }),
+    ],
   });
 </script>
 

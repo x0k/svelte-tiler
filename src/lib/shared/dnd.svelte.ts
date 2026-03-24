@@ -3,159 +3,50 @@ import { SvelteMap } from 'svelte/reactivity';
 
 import type { MutableRegistry } from './registry.ts';
 
-const ON_ENTER = Symbol('on-enter-key');
-const ON_MOVE = Symbol('on-move-key');
-const ON_LEAVE = Symbol('on-leave-key');
-const ON_DROP = Symbol('on-drop-key');
+export interface DndPlugin<T> {
+  onStart(e: PointerEvent, draggable: Draggable<T>): void;
+  onMove(e: PointerEvent): void;
+  onStop(e: StopEvent): void;
+}
 
-export type FeedbackFactory = (
-  e: PointerEvent,
-  el: HTMLElement
-) =>
-  | { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void }
-  | undefined;
+export interface DndContextOptions<T> {
+  plugins?: DndPlugin<T>[];
+}
 
-export interface DndContextOptions {
-  feedback?: FeedbackFactory;
+export interface Draggable<T = unknown> extends DndPlugin<T> {
+  id: string;
+  element: HTMLElement;
+  handle: HTMLElement | undefined;
+  data: T | undefined;
+}
+
+export interface Droppable<D = unknown, T extends D = D> {
+  id: string;
+  element: HTMLElement;
+  accepts(draggable: Draggable<D>): draggable is Draggable<T>;
+  onEnter(): void;
+  onMove(e: PointerEvent): void;
+  onLeave(): void;
+  onDrop(data: T, draggable: Draggable<T>): void;
 }
 
 export class DndContext<D = unknown> {
-  readonly feedback: FeedbackFactory;
-
-  constructor(options: DndContextOptions = {}) {
-    this.feedback = options.feedback ?? (() => undefined);
-  }
-
+  #didDrag = false;
   #droppables = new SvelteMap<string, Droppable<D, any>>();
+  #plugins: DndPlugin<D>[];
 
   sourceId: string | undefined = $state.raw();
   targetId: string | undefined = $state.raw();
+
+  constructor({ plugins = [] }: DndContextOptions<D> = {}) {
+    this.#plugins = plugins;
+  }
 
   get droppables(): MutableRegistry<string, Droppable<D, any> | undefined> {
     return this.#droppables;
   }
 
-  findDroppable(
-    x: number,
-    y: number,
-    draggable: Draggable<D>
-  ): Droppable<D, any> | undefined {
-    for (const d of this.#droppables.values()) {
-      if (d.element === undefined) {
-        continue;
-      }
-      const r = d.element.getBoundingClientRect();
-      if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
-        continue;
-      }
-      if (d.accepts(draggable)) {
-        return d;
-      }
-    }
-  }
-}
-
-export type StopReason = 'drop' | 'cancel';
-
-export interface StopEvent {
-  reason: StopReason;
-}
-
-export interface DraggableOptions<D> {
-  data?: D;
-}
-
-export class Draggable<D = unknown> {
-  #abortController = new AbortController();
-  #didDrag = false;
-  #baseElement: HTMLElement | undefined;
-  #hasHandel = false;
-
-  readonly id = crypto.randomUUID();
-
-  constructor(
-    protected readonly ctx: DndContext<D>,
-    protected readonly options: DraggableOptions<D> = {}
-  ) {
-    this.register = this.register.bind(this);
-    this.registerHandle = this.registerHandle.bind(this);
-  }
-
-  get isDragged() {
-    return this.ctx.sourceId === this.id;
-  }
-
-  get data() {
-    return this.options.data;
-  }
-
-  register(el: HTMLElement) {
-    if (!this.#hasHandel) {
-      this[Symbol.dispose]();
-      this.addEventHandlers(el);
-    }
-    this.#baseElement = el;
-    return () => {
-      this.#baseElement = undefined;
-      if (!this.#hasHandel) {
-        this[Symbol.dispose]();
-      }
-    };
-  }
-
-  registerHandle(el: HTMLElement) {
-    this[Symbol.dispose]();
-    this.addEventHandlers(el);
-    this.#hasHandel = true;
-    return () => {
-      this.#hasHandel = false;
-      this[Symbol.dispose]();
-    };
-  }
-
-  [Symbol.dispose]() {
-    this.#abortController.abort();
-    this.#abortController = new AbortController();
-  }
-
-  protected onStart(_e: PointerEvent, _el: HTMLElement) {}
-
-  protected onMove(_e: PointerEvent) {}
-
-  protected onStop(_e: StopEvent) {}
-
-  protected addEventHandlers(el: HTMLElement) {
-    el.addEventListener(
-      'pointerdown',
-      (e) =>
-        this.pointerDownHandler(
-          e as PointerEvent & {
-            currentTarget: HTMLElement;
-          }
-        ),
-      this.#abortController
-    );
-    el.addEventListener(
-      'click',
-      (e) => {
-        if (!this.#didDrag) {
-          return;
-        }
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        this.#didDrag = false;
-      },
-      { capture: true, signal: this.#abortController.signal }
-    );
-  }
-
-  // NOTE: I believe this logic should be in `DndContext`, but it is difficult to
-  // separate and there is no specific reason to do so right now.
-  protected pointerDownHandler(
-    event: PointerEvent & {
-      currentTarget: HTMLElement;
-    }
-  ) {
+  beginDrag(draggable: Draggable<D>, event: PointerEvent) {
     if (
       event.button !== 0 ||
       !event.isPrimary ||
@@ -164,19 +55,13 @@ export class Draggable<D = unknown> {
       return;
     }
 
-    const el = event.currentTarget;
+    const el = draggable.element;
 
     el.setPointerCapture(event.pointerId);
 
     const abortController = new AbortController();
 
-    let feedback:
-      | {
-          onMove: (e: PointerEvent) => void;
-          onStop: (e: StopEvent) => void;
-        }
-      | undefined;
-
+    const plugins: DndPlugin<D>[] = [draggable, ...this.#plugins];
     let activeDroppable: Droppable<D, any> | undefined;
     const handleMove = (e: PointerEvent) => {
       if (e.pointerId !== event.pointerId) {
@@ -190,23 +75,25 @@ export class Draggable<D = unknown> {
           return;
         }
         this.#didDrag = true;
-        this.ctx.sourceId = this.id;
-        feedback = this.ctx.feedback(e, this.#baseElement ?? el);
-        this.onStart(e, el);
+        this.sourceId = draggable.id;
+
+        for (const p of plugins) {
+          p.onStart(e, draggable);
+        }
       }
 
-      this.onMove(e);
+      for (const p of plugins) {
+        p.onMove(e);
+      }
 
-      feedback?.onMove(e);
-
-      const nextDroppable = this.ctx.findDroppable(e.clientX, e.clientY, this);
+      const nextDroppable = this.findDroppable(e.clientX, e.clientY, draggable);
       if (activeDroppable !== nextDroppable) {
-        activeDroppable?.[ON_LEAVE]();
-        nextDroppable?.[ON_ENTER]();
+        activeDroppable?.onLeave();
+        nextDroppable?.onEnter();
         activeDroppable = nextDroppable;
-        this.ctx.targetId = activeDroppable?.id;
+        this.targetId = activeDroppable?.id;
       }
-      activeDroppable?.[ON_MOVE](e);
+      activeDroppable?.onMove(e);
     };
 
     const handleStop = (ev: StopEvent) => {
@@ -218,21 +105,24 @@ export class Draggable<D = unknown> {
       }
 
       const snap =
-        ev.reason === 'drop' ? $state.snapshot(this.options.data) : undefined;
-      activeDroppable?.[ON_LEAVE]();
+        ev.reason === 'drop' ? $state.snapshot(draggable.data) : undefined;
+      activeDroppable?.onLeave();
 
-      feedback?.onStop(ev);
-
-      this.onStop(ev);
+      for (const p of plugins) {
+        p.onStop(ev);
+      }
 
       if (ev.reason === 'drop') {
         flushSync(() => {
-          activeDroppable?.[ON_DROP](snap, this);
+          activeDroppable?.onDrop(snap, draggable);
         });
       }
 
-      this.ctx.targetId = undefined;
-      this.ctx.sourceId = undefined;
+      this.targetId = undefined;
+      this.sourceId = undefined;
+      setTimeout(() => {
+        this.#didDrag = false;
+      });
     };
 
     function onKeydown(e: KeyboardEvent) {
@@ -261,9 +151,129 @@ export class Draggable<D = unknown> {
       abortController
     );
   }
+
+  preventClick(e: PointerEvent) {
+    if (!this.#didDrag) {
+      return;
+    }
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    this.#didDrag = false;
+  }
+
+  protected findDroppable(
+    x: number,
+    y: number,
+    draggable: Draggable<D>
+  ): Droppable<D, any> | undefined {
+    for (const d of this.#droppables.values()) {
+      if (d.element === undefined) {
+        continue;
+      }
+      const r = d.element.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
+        continue;
+      }
+      if (d.accepts(draggable)) {
+        return d;
+      }
+    }
+  }
 }
 
-export class Droppable<D = unknown, T extends D = D> {
+export type StopReason = 'drop' | 'cancel';
+
+export interface StopEvent {
+  reason: StopReason;
+}
+
+export interface DragSourceOptions<D> {
+  data?: D;
+}
+
+export class DragSource<D = unknown> implements Draggable<D> {
+  #abortController = new AbortController();
+  #baseElement: HTMLElement | undefined;
+  #handleElement: HTMLElement | undefined;
+
+  readonly id = crypto.randomUUID();
+
+  constructor(
+    protected readonly ctx: DndContext<D>,
+    protected readonly options: DragSourceOptions<D> = {}
+  ) {
+    this.register = this.register.bind(this);
+    this.registerHandle = this.registerHandle.bind(this);
+  }
+
+  get element() {
+    return this.#baseElement!;
+  }
+
+  get handle() {
+    return this.#handleElement;
+  }
+
+  get isDragged() {
+    return this.ctx.sourceId === this.id;
+  }
+
+  get data() {
+    return this.options.data;
+  }
+
+  register(el: HTMLElement) {
+    if (!this.#handleElement) {
+      this[Symbol.dispose]();
+      this.addEventHandlers(el);
+    }
+    this.#baseElement = el;
+    return () => {
+      this.#baseElement = undefined;
+      if (!this.#handleElement) {
+        this[Symbol.dispose]();
+      }
+    };
+  }
+
+  registerHandle(el: HTMLElement) {
+    this[Symbol.dispose]();
+    this.addEventHandlers(el);
+    this.#handleElement = el;
+    return () => {
+      this.#handleElement = undefined;
+      this[Symbol.dispose]();
+    };
+  }
+
+  [Symbol.dispose]() {
+    this.#abortController.abort();
+    this.#abortController = new AbortController();
+  }
+
+  onStart(_e: PointerEvent, _draggable: Draggable<D>) {}
+
+  onMove(_e: PointerEvent) {}
+
+  onStop(_e: StopEvent) {}
+
+  protected addEventHandlers(el: HTMLElement) {
+    el.addEventListener(
+      'pointerdown',
+      (e) => this.ctx.beginDrag(this, e),
+      this.#abortController
+    );
+    el.addEventListener('click', (e) => this.ctx.preventClick(e), {
+      capture: true,
+      signal: this.#abortController.signal,
+    });
+  }
+}
+
+export class DropTarget<D = unknown, T extends D = D> implements Droppable<
+  D,
+  T
+> {
   #element: HTMLElement | undefined = $state.raw();
 
   readonly id = crypto.randomUUID();
@@ -273,7 +283,7 @@ export class Droppable<D = unknown, T extends D = D> {
   }
 
   get element() {
-    return this.#element;
+    return this.#element!;
   }
 
   get isOver() {
@@ -294,69 +304,193 @@ export class Droppable<D = unknown, T extends D = D> {
     };
   }
 
-  accepts(draggable: Draggable<D>): draggable is Draggable<T> {
+  accepts(draggable: DragSource<D>): draggable is DragSource<T> {
     return true;
   }
 
-  [ON_ENTER]() {
-    this.onEnter();
-  }
+  onEnter() {}
 
-  [ON_MOVE](e: PointerEvent) {
-    this.onMove(e);
-  }
+  onMove(_e: PointerEvent) {}
 
-  [ON_LEAVE]() {
-    this.onLeave();
-  }
+  onLeave() {}
 
-  [ON_DROP](data: T, draggable: Draggable<T>) {
-    this.onDrop(data, draggable);
-  }
+  onDrop(_data: T, _draggable: Draggable<T>) {}
+}
 
-  protected onEnter() {}
-
-  protected onMove(_e: PointerEvent) {}
-
-  protected onLeave() {}
-
-  protected onDrop(_data: T, _draggable: Draggable<T>) {}
+export interface ClonedGhostOptions {
+  /** @default document.body */
+  portalTo?: ShadowRoot | Document | Node;
+}
+interface ClonedGhostState {
+  element: HTMLElement;
+  offsetX: number;
+  offsetY: number;
 }
 
 export class ClonedGhost {
-  #element: HTMLElement;
-  #offsetX: number;
-  #offsetY: number;
+  #options: ClonedGhostOptions;
+  #state: ClonedGhostState = {} as ClonedGhostState;
 
-  constructor(el: HTMLElement, e: PointerEvent) {
-    const rect = el.getBoundingClientRect();
-    this.#element = el.cloneNode(true) as HTMLElement;
-    this.#offsetX = e.clientX - rect.left;
-    this.#offsetY = e.clientY - rect.top;
-
-    this.#element.style.position = 'fixed';
-    this.#element.style.left = '0';
-    this.#element.style.top = '0';
-    this.#element.style.width = `${rect.width}px`;
-    this.#element.style.height = `${rect.height}px`;
-    this.#element.style.pointerEvents = 'none';
-    this.#element.style.zIndex = '9999';
-    this.#element.style.opacity = '0.85';
-    this.onMove(e);
+  constructor(options: ClonedGhostOptions = {}) {
+    this.#options = options;
   }
 
-  attach(root: ShadowRoot | Document | Node) {
-    root.appendChild(this.#element);
-    return this;
+  onStart(e: PointerEvent, draggable: Draggable<any>) {
+    const el = draggable.element;
+    const rect = el.getBoundingClientRect();
+    const element = el.cloneNode(true) as HTMLElement;
+    Object.assign(element.style, {
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      pointerEvents: 'none',
+      zIndex: '9999',
+      opacity: '0.85',
+    });
+    (this.#options.portalTo ?? document.body).appendChild(element);
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    this.#state = {
+      element,
+      offsetX,
+      offsetY,
+    };
   }
 
   onMove(e: PointerEvent) {
-    const x = e.clientX - this.#offsetX;
-    const y = e.clientY - this.#offsetY;
-    this.#element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    const x = e.clientX - this.#state.offsetX;
+    const y = e.clientY - this.#state.offsetY;
+    this.#state.element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
 
   onStop() {
-    this.#element.remove();
+    this.#state.element.remove();
+  }
+}
+
+export interface AutoScrollOptions {
+  scrollables: Iterable<HTMLElement>;
+  /**
+   * Size of the trigger zone near each edge.
+   * A value < 1 is treated as a fraction of the container dimension,
+   * a value ≥ 1 is treated as absolute pixels.
+   * @default 0.15
+   */
+  zone?: number;
+  /** Maximum scroll speed in px/frame at the very edge. @default 20 */
+  maxSpeed?: number;
+}
+
+/** t=0 at zone boundary (slow), t=1 at edge (fast). */
+function easeOut(t: number): number {
+  return t * t;
+}
+
+/**
+ * Returns the scroll delta for one axis.
+ * Speed ramps from 0 at the zone boundary to maxSpeed at the very edge,
+ * using an ease-out curve (slow on entry, fast when pressed against the edge).
+ */
+function edgeSpeed(
+  pointer: number,
+  start: number,
+  end: number,
+  zone: number | undefined,
+  maxSpeed: number
+): number {
+  const dim = end - start;
+  const z = zone === undefined ? dim * 0.15 : zone < 1 ? dim * zone : zone;
+
+  if (pointer < start + z) {
+    const t = 1 - (pointer - start) / z;
+    return -Math.round(easeOut(t) * maxSpeed);
+  }
+  if (pointer > end - z) {
+    const t = 1 - (end - pointer) / z;
+    return Math.round(easeOut(t) * maxSpeed);
+  }
+  return 0;
+}
+
+function compareByDepth(a: HTMLElement, b: HTMLElement): number {
+  const rel = a.compareDocumentPosition(b);
+  if (rel & Node.DOCUMENT_POSITION_CONTAINS) return 1;
+  if (rel & Node.DOCUMENT_POSITION_CONTAINED_BY) return -1;
+  return 0;
+}
+
+export class SimpleAutoScroller implements DndPlugin<any> {
+  #options: AutoScrollOptions;
+  #rafId: number | undefined;
+  #px = 0;
+  #py = 0;
+  #candidates: HTMLElement[] = [];
+
+  constructor(options: AutoScrollOptions) {
+    this.#options = options;
+  }
+
+  onStart(e: PointerEvent) {
+    this.#px = e.clientX;
+    this.#py = e.clientY;
+    for (const s of this.#options.scrollables) {
+      this.#candidates.push(s);
+    }
+    this.#candidates.sort(compareByDepth);
+    this.#schedule();
+  }
+
+  onMove(e: PointerEvent) {
+    this.#px = e.clientX;
+    this.#py = e.clientY;
+  }
+
+  onStop() {
+    this.#candidates.length = 0;
+    if (this.#rafId !== undefined) {
+      cancelAnimationFrame(this.#rafId);
+      this.#rafId = undefined;
+    }
+  }
+
+  #schedule() {
+    this.#rafId = requestAnimationFrame(() => {
+      this.#tick();
+      this.#schedule();
+    });
+  }
+
+  #tick() {
+    const { zone = 0.15, maxSpeed = 20 } = this.#options;
+
+    for (const el of this.#candidates) {
+      const rect =
+        el === document.documentElement
+          ? {
+              left: 0,
+              top: 0,
+              right: window.innerWidth,
+              bottom: window.innerHeight,
+            }
+          : el.getBoundingClientRect();
+
+      if (
+        this.#px < rect.left ||
+        this.#px > rect.right ||
+        this.#py < rect.top ||
+        this.#py > rect.bottom
+      )
+        continue;
+
+      const dx = edgeSpeed(this.#px, rect.left, rect.right, zone, maxSpeed);
+      const dy = edgeSpeed(this.#py, rect.top, rect.bottom, zone, maxSpeed);
+
+      if (dx !== 0 || dy !== 0) {
+        el.scrollBy({ left: dx, top: dy });
+        break;
+      }
+    }
   }
 }

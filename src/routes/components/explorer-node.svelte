@@ -41,7 +41,7 @@
   import ChevronRight from '~icons/codicon/chevron-right';
   import ChevronDown from '~icons/codicon/chevron-down';
 
-  import { Draggable } from '$lib/shared/dnd.svelte.js';
+  import { DragSource } from '$lib/shared/dnd.svelte.js';
 
   import {
     getFileExtension,
@@ -60,7 +60,7 @@
   }: {
     node: TreeNode;
     level?: number;
-    createDraggable: (node: TreeNode) => Draggable;
+    createDraggable: (node: TreeNode) => DragSource;
     onFileClick: (node: FileNode) => void;
   } = $props();
 

@@ -12,7 +12,7 @@
   import {
     ClonedGhost,
     DndContext,
-    Draggable,
+    DragSource,
     type StopEvent,
   } from '$lib/shared/dnd.svelte.js';
   import {
@@ -71,7 +71,13 @@
 
   let portalEl: HTMLDivElement;
   const dnd = new DndContext({
-    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
+    plugins: [
+      new ClonedGhost({
+        get portalTo() {
+          return portalEl;
+        },
+      }),
+    ],
   });
 
   const ctx = new TilerContext({
@@ -198,14 +204,14 @@
     })
   );
 
-  class DraggableTreeNode extends Draggable<Tile> {
+  class DraggableTreeNode extends DragSource<Tile> {
     #lastData: Tile | undefined;
 
     get data() {
       return (this.#lastData ??= this.options.data);
     }
 
-    protected onStop(e: StopEvent): void {
+    onStop(e: StopEvent): void {
       if (e.reason === 'drop') {
         this.#lastData = undefined;
       }
