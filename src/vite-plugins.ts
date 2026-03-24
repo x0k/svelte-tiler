@@ -155,6 +155,8 @@ export function markedImport(): Plugin {
 
 function fixImportsAndStyles(code: string): string {
   return code
+    .replace(`  import * as tiles from './tiles.js';\n\n`, '')
+    .replace(/\.\.\.tiles, /, '')
     .replaceAll('$lib', 'svelte-tiler')
     .replaceAll('/index.js', '')
     .replaceAll('.js', '')

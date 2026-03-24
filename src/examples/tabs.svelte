@@ -3,8 +3,9 @@
   import { ClonedGhost, DndContext } from '$lib/shared/dnd.svelte.js';
   import { Tiler, type Tiles } from '$lib/index.js';
   import * as Leaf from '$lib/tiles/leaf.svelte';
-  import * as Split from '$lib/tiles/split.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
+
+  import * as tiles from './tiles.js';
 
   const createLeaf = Leaf.setup(fromConstant(leaf));
   // Override app context
@@ -32,11 +33,7 @@
 </script>
 
 <div class="tabs" bind:this={portalEl}>
-  <Tiler
-    bind:layout
-    definitions={{ leaf: Leaf, split: Split, tabs: Tabs }}
-    {dnd}
-  />
+  <Tiler bind:layout definitions={{ ...tiles, leaf: Leaf, tabs: Tabs }} {dnd} />
 </div>
 
 {#snippet leaf(tile: Tiles['leaf'])}

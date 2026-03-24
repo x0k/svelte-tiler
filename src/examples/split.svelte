@@ -3,7 +3,8 @@
   import { Tiler, type Tiles } from '$lib/index.js';
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Split from '$lib/tiles/split.svelte';
-  import * as Tabs from '$lib/tiles/tabs.svelte';
+
+  import * as tiles from './tiles.js';
 
   const createLeaf = Leaf.setup(fromConstant(leaf));
 
@@ -36,7 +37,7 @@
 </script>
 
 <div class="split">
-  <Tiler bind:layout definitions={{ leaf: Leaf, split: Split, tabs: Tabs }} />
+  <Tiler bind:layout definitions={{ ...tiles, leaf: Leaf, split: Split }} />
 </div>
 
 {#snippet leaf(tile: Tiles['leaf'])}

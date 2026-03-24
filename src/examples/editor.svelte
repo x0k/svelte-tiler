@@ -20,6 +20,8 @@
   import * as Split from '$lib/tiles/split.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
 
+  import * as tiles from './tiles.js';
+
   const names = new Map<string, string>();
   const content = new SvelteMap<string, string>();
 
@@ -95,7 +97,7 @@
   });
   const ctx = new TilerContext({
     dnd,
-    definitions: { leaf: Leaf, split: Split, tabs: Tabs },
+    definitions: { ...tiles, leaf: Leaf, split: Split, tabs: Tabs },
   });
   setTilerContext(ctx);
 </script>
