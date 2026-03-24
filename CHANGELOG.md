@@ -1,5 +1,45 @@
 # svelte-tiler
 
+## 0.7.0
+
+### Minor Changes
+
+- [BREAKING] Introduce DND plugins system. ([#20](https://github.com/x0k/svelte-tiler/pull/20))
+
+  To migrate, replace the following code:
+
+  ```ts
+  const dnd = new DndContext({
+    feedback: (e, el) => new ClonedGhost(el, e).attach(portalEl),
+  });
+  ```
+
+  with:
+
+  ```ts
+  const dnd = new DndContext({
+    plugins: [
+      new ClonedGhost({
+        get portalTo() {
+          return portalEl;
+        },
+      }),
+    ],
+  });
+  ```
+
+  Replace: `Draggable` -> `DragSource`, `Droppable` -> `DropTarget`.
+
+  `onStart` method now receives `Draggable` instead of `HTMLElement`:
+
+  ```diff
+  -onStart(_: PointerEvent, el: HTMLElement): void {
+  +onStart(_: PointerEvent, d: Draggable): void {
+  +  const el = d.element;
+  ```
+
+- Add `SimpleAutoScroller` DND plugin ([`d6c6fe3`](https://github.com/x0k/svelte-tiler/commit/d6c6fe3b152743e723736aa5c9c5042de80daab3))
+
 ## 0.6.1
 
 ### Patch Changes
