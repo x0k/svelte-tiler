@@ -2,7 +2,11 @@
   import { getContext, setContext, tick, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
-  import { DndContext, Draggable } from '$lib/shared/dnd.svelte.js';
+  import {
+    DndContext,
+    DragSource,
+    type Draggable,
+  } from '$lib/shared/dnd.svelte.js';
   import { normalize, type Constraint } from '$lib/shared/constraints.js';
   import type { Direction } from '$lib/shared/spatial.js';
   import { almostEqual } from '$lib/shared/math.js';
@@ -72,7 +76,7 @@
   type SplitContext<R extends string = string> = {
     resizer?: Registry<
       R,
-      Snippet<[Draggable, Tiles['split'], number]> | undefined
+      Snippet<[DragSource, Tiles['split'], number]> | undefined
     >;
   };
 
@@ -317,7 +321,7 @@
     }
   }
 
-  class DraggableResizer extends Draggable {
+  class DraggableResizer extends DragSource {
     #index = 0;
 
     constructor(ctx: DndContext, index: number) {
@@ -325,13 +329,13 @@
       this.#index = index;
     }
 
-    protected onStart(_: PointerEvent, el: HTMLElement): void {
-      resizerEl = el;
+    onStart(_: PointerEvent, d: Draggable): void {
+      resizerEl = d.element;
       initNextLayout();
       snapshottedWeight = totalWeight;
     }
 
-    protected onMove(e: PointerEvent) {
+    onMove(e: PointerEvent) {
       const currentPos = isRow ? e.pageX : e.pageY;
       const rect = resizerEl.getBoundingClientRect();
       const lastPos = isRow
