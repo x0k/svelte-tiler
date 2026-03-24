@@ -2,7 +2,7 @@ import {
   DragSource,
   DropTarget,
   type Draggable,
-  type DraggableOptions,
+  type DragSourceOptions,
   type StopEvent,
 } from './shared/dnd.svelte.js';
 import type { Tile } from './model.js';
@@ -28,7 +28,7 @@ export class TileDropTarget<T extends Tile> extends DropTarget<Tile, T> {
   }
 }
 
-export interface TileDragSourceOptions extends DraggableOptions<Tile> {
+export interface TileDragSourceOptions extends DragSourceOptions<Tile> {
   parentTileId: string;
   childIndex: number;
 }

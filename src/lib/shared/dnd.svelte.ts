@@ -3,21 +3,14 @@ import { SvelteMap } from 'svelte/reactivity';
 
 import type { MutableRegistry } from './registry.ts';
 
-export type FeedbackFactory = (
-  e: PointerEvent,
-  el: HTMLElement
-) =>
-  | { onMove: (e: PointerEvent) => void; onStop: (e: StopEvent) => void }
-  | undefined;
-
-export interface DndContextOptions {
-  feedback?: FeedbackFactory;
-}
-
 export interface DndPlugin<T> {
   onStart(e: PointerEvent, draggable: Draggable<T>): void;
   onMove(e: PointerEvent): void;
   onStop(e: StopEvent): void;
+}
+
+export interface DndContextOptions<T> {
+  plugins?: DndPlugin<T>[];
 }
 
 export interface Draggable<T = unknown> extends DndPlugin<T> {
@@ -38,17 +31,16 @@ export interface Droppable<D = unknown, T extends D = D> {
 }
 
 export class DndContext<D = unknown> {
-  readonly feedback: FeedbackFactory;
-
-  constructor(options: DndContextOptions = {}) {
-    this.feedback = options.feedback ?? (() => undefined);
-  }
-
   #didDrag = false;
   #droppables = new SvelteMap<string, Droppable<D, any>>();
+  #plugins: DndPlugin<D>[];
 
   sourceId: string | undefined = $state.raw();
   targetId: string | undefined = $state.raw();
+
+  constructor({ plugins = [] }: DndContextOptions<D> = {}) {
+    this.#plugins = plugins;
+  }
 
   get droppables(): MutableRegistry<string, Droppable<D, any> | undefined> {
     return this.#droppables;
@@ -69,13 +61,7 @@ export class DndContext<D = unknown> {
 
     const abortController = new AbortController();
 
-    let feedback:
-      | {
-          onMove: (e: PointerEvent) => void;
-          onStop: (e: StopEvent) => void;
-        }
-      | undefined;
-
+    const plugins: DndPlugin<D>[] = [draggable, ...this.#plugins];
     let activeDroppable: Droppable<D, any> | undefined;
     const handleMove = (e: PointerEvent) => {
       if (e.pointerId !== event.pointerId) {
@@ -90,13 +76,15 @@ export class DndContext<D = unknown> {
         }
         this.#didDrag = true;
         this.sourceId = draggable.id;
-        feedback = this.feedback(e, draggable.handle ?? el);
-        draggable.onStart(e, draggable);
+
+        for (const p of plugins) {
+          p.onStart(e, draggable);
+        }
       }
 
-      draggable.onMove(e);
-
-      feedback?.onMove(e);
+      for (const p of plugins) {
+        p.onMove(e);
+      }
 
       const nextDroppable = this.findDroppable(e.clientX, e.clientY, draggable);
       if (activeDroppable !== nextDroppable) {
@@ -120,9 +108,9 @@ export class DndContext<D = unknown> {
         ev.reason === 'drop' ? $state.snapshot(draggable.data) : undefined;
       activeDroppable?.onLeave();
 
-      feedback?.onStop(ev);
-
-      draggable.onStop(ev);
+      for (const p of plugins) {
+        p.onStop(ev);
+      }
 
       if (ev.reason === 'drop') {
         flushSync(() => {
@@ -173,7 +161,7 @@ export class DndContext<D = unknown> {
     this.#didDrag = false;
   }
 
-  private findDroppable(
+  protected findDroppable(
     x: number,
     y: number,
     draggable: Draggable<D>
@@ -199,11 +187,11 @@ export interface StopEvent {
   reason: StopReason;
 }
 
-export interface DraggableOptions<D> {
+export interface DragSourceOptions<D> {
   data?: D;
 }
 
-export class DragSource<D = unknown> {
+export class DragSource<D = unknown> implements Draggable<D> {
   #abortController = new AbortController();
   #baseElement: HTMLElement | undefined;
   #handleElement: HTMLElement | undefined;
@@ -212,7 +200,7 @@ export class DragSource<D = unknown> {
 
   constructor(
     protected readonly ctx: DndContext<D>,
-    protected readonly options: DraggableOptions<D> = {}
+    protected readonly options: DragSourceOptions<D> = {}
   ) {
     this.register = this.register.bind(this);
     this.registerHandle = this.registerHandle.bind(this);
@@ -282,7 +270,10 @@ export class DragSource<D = unknown> {
   }
 }
 
-export class DropTarget<D = unknown, T extends D = D> {
+export class DropTarget<D = unknown, T extends D = D> implements Droppable<
+  D,
+  T
+> {
   #element: HTMLElement | undefined = $state.raw();
 
   readonly id = crypto.randomUUID();
@@ -326,40 +317,179 @@ export class DropTarget<D = unknown, T extends D = D> {
   onDrop(_data: T, _draggable: Draggable<T>) {}
 }
 
+export interface ClonedGhostOptions {
+  container: ShadowRoot | Document | Node;
+}
+interface ClonedGhostState {
+  element: HTMLElement;
+  offsetX: number;
+  offsetY: number;
+}
+
 export class ClonedGhost {
-  #element: HTMLElement;
-  #offsetX: number;
-  #offsetY: number;
+  #options: ClonedGhostOptions;
+  #state: ClonedGhostState = {} as ClonedGhostState;
 
-  constructor(el: HTMLElement, e: PointerEvent) {
-    const rect = el.getBoundingClientRect();
-    this.#element = el.cloneNode(true) as HTMLElement;
-    this.#offsetX = e.clientX - rect.left;
-    this.#offsetY = e.clientY - rect.top;
-
-    this.#element.style.position = 'fixed';
-    this.#element.style.left = '0';
-    this.#element.style.top = '0';
-    this.#element.style.width = `${rect.width}px`;
-    this.#element.style.height = `${rect.height}px`;
-    this.#element.style.pointerEvents = 'none';
-    this.#element.style.zIndex = '9999';
-    this.#element.style.opacity = '0.85';
-    this.onMove(e);
+  constructor(options: ClonedGhostOptions) {
+    this.#options = options;
   }
 
-  attach(root: ShadowRoot | Document | Node) {
-    root.appendChild(this.#element);
-    return this;
+  onStart(e: PointerEvent, draggable: Draggable<any>) {
+    const el = draggable.element;
+    const rect = el.getBoundingClientRect();
+    const element = el.cloneNode(true) as HTMLElement;
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    this.#state = {
+      element,
+      offsetX,
+      offsetY,
+    };
+    Object.assign(element.style, {
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      pointerEvents: 'none',
+      zIndex: '9999',
+      opacity: '0.85',
+    });
+    this.#options.container.appendChild(element);
   }
 
   onMove(e: PointerEvent) {
-    const x = e.clientX - this.#offsetX;
-    const y = e.clientY - this.#offsetY;
-    this.#element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    const x = e.clientX - this.#state.offsetX;
+    const y = e.clientY - this.#state.offsetY;
+    this.#state.element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
 
   onStop() {
-    this.#element.remove();
+    this.#state.element.remove();
+  }
+}
+
+export interface AutoScrollOptions {
+  scrollables: Iterable<HTMLElement>;
+  /**
+   * Size of the trigger zone near each edge.
+   * A value < 1 is treated as a fraction of the container dimension,
+   * a value ≥ 1 is treated as absolute pixels.
+   * @default 0.15
+   */
+  zone?: number;
+  /** Maximum scroll speed in px/frame at the very edge. @default 20 */
+  maxSpeed?: number;
+}
+
+/** t=0 at zone boundary (slow), t=1 at edge (fast). */
+function easeOut(t: number): number {
+  return t * t;
+}
+
+/**
+ * Returns the scroll delta for one axis.
+ * Speed ramps from 0 at the zone boundary to maxSpeed at the very edge,
+ * using an ease-out curve (slow on entry, fast when pressed against the edge).
+ */
+function edgeSpeed(
+  pointer: number,
+  start: number,
+  end: number,
+  zone: number | undefined,
+  maxSpeed: number
+): number {
+  const dim = end - start;
+  const z = zone === undefined ? dim * 0.15 : zone < 1 ? dim * zone : zone;
+
+  if (pointer < start + z) {
+    const t = 1 - (pointer - start) / z;
+    return -Math.round(easeOut(t) * maxSpeed);
+  }
+  if (pointer > end - z) {
+    const t = 1 - (end - pointer) / z;
+    return Math.round(easeOut(t) * maxSpeed);
+  }
+  return 0;
+}
+
+function compareByDepth(a: HTMLElement, b: HTMLElement): number {
+  const rel = a.compareDocumentPosition(b);
+  if (rel & Node.DOCUMENT_POSITION_CONTAINS) return 1;
+  if (rel & Node.DOCUMENT_POSITION_CONTAINED_BY) return -1;
+  return 0;
+}
+
+export class SimpleAutoScroller implements DndPlugin<any> {
+  #options: AutoScrollOptions;
+  #rafId: number | undefined;
+  #px = 0;
+  #py = 0;
+  #candidates: HTMLElement[] = [];
+
+  constructor(options: AutoScrollOptions) {
+    this.#options = options;
+  }
+
+  onStart(e: PointerEvent) {
+    this.#px = e.clientX;
+    this.#py = e.clientY;
+    for (const s of this.#options.scrollables) {
+      this.#candidates.push(s);
+    }
+    this.#candidates.sort(compareByDepth);
+    this.#schedule();
+  }
+
+  onMove(e: PointerEvent) {
+    this.#px = e.clientX;
+    this.#py = e.clientY;
+  }
+
+  onStop() {
+    this.#candidates.length = 0;
+    if (this.#rafId !== undefined) {
+      cancelAnimationFrame(this.#rafId);
+      this.#rafId = undefined;
+    }
+  }
+
+  #schedule() {
+    this.#rafId = requestAnimationFrame(() => {
+      this.#tick();
+      this.#schedule();
+    });
+  }
+
+  #tick() {
+    const { zone = 0.15, maxSpeed = 20 } = this.#options;
+
+    for (const el of this.#candidates) {
+      const rect =
+        el === document.documentElement
+          ? {
+              left: 0,
+              top: 0,
+              right: window.innerWidth,
+              bottom: window.innerHeight,
+            }
+          : el.getBoundingClientRect();
+
+      if (
+        this.#px < rect.left ||
+        this.#px > rect.right ||
+        this.#py < rect.top ||
+        this.#py > rect.bottom
+      )
+        continue;
+
+      const dx = edgeSpeed(this.#px, rect.left, rect.right, zone, maxSpeed);
+      const dy = edgeSpeed(this.#py, rect.top, rect.bottom, zone, maxSpeed);
+
+      if (dx !== 0 || dy !== 0) {
+        el.scrollBy({ left: dx, top: dy });
+        break;
+      }
+    }
   }
 }
