@@ -73,7 +73,7 @@
   const dnd = new DndContext({
     plugins: [
       new ClonedGhost({
-        get container() {
+        get portalTo() {
           return portalEl;
         },
       }),

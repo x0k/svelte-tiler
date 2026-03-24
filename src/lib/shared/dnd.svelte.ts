@@ -318,7 +318,8 @@ export class DropTarget<D = unknown, T extends D = D> implements Droppable<
 }
 
 export interface ClonedGhostOptions {
-  container: ShadowRoot | Document | Node;
+  /** @default document.body */
+  portalTo?: ShadowRoot | Document | Node;
 }
 interface ClonedGhostState {
   element: HTMLElement;
@@ -330,7 +331,7 @@ export class ClonedGhost {
   #options: ClonedGhostOptions;
   #state: ClonedGhostState = {} as ClonedGhostState;
 
-  constructor(options: ClonedGhostOptions) {
+  constructor(options: ClonedGhostOptions = {}) {
     this.#options = options;
   }
 
@@ -338,13 +339,6 @@ export class ClonedGhost {
     const el = draggable.element;
     const rect = el.getBoundingClientRect();
     const element = el.cloneNode(true) as HTMLElement;
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-    this.#state = {
-      element,
-      offsetX,
-      offsetY,
-    };
     Object.assign(element.style, {
       position: 'fixed',
       left: '0',
@@ -355,7 +349,14 @@ export class ClonedGhost {
       zIndex: '9999',
       opacity: '0.85',
     });
-    this.#options.container.appendChild(element);
+    (this.#options.portalTo ?? document.body).appendChild(element);
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    this.#state = {
+      element,
+      offsetX,
+      offsetY,
+    };
   }
 
   onMove(e: PointerEvent) {
