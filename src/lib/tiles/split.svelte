@@ -2,7 +2,11 @@
   import { getContext, setContext, tick, type Snippet } from 'svelte';
 
   import type { Registry } from '$lib/shared/registry.js';
-  import { DndContext, DragSource, type Draggable } from '$lib/shared/dnd.svelte.js';
+  import {
+    DndContext,
+    DragSource,
+    type Draggable,
+  } from '$lib/shared/dnd.svelte.js';
   import { normalize, type Constraint } from '$lib/shared/constraints.js';
   import type { Direction } from '$lib/shared/spatial.js';
   import { almostEqual } from '$lib/shared/math.js';
