@@ -1,4 +1,4 @@
 export * as leaf from '$lib/tiles/leaf.svelte';
 export * as split from '$lib/tiles/split.svelte';
 export * as tabs from '$lib/tiles/tabs.svelte';
-export * as tabs2 from '$lib/tiles/tabs2.svelte';
+export * as stabs from '$lib/tiles/stabs.svelte';

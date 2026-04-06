@@ -13,7 +13,7 @@
 
   declare module '../model.js' {
     interface TileRegistry {
-      tabs2: {
+      stabs: {
         titles: string[];
         selectedTab: number;
         bar: string;
@@ -21,11 +21,11 @@
       };
     }
     interface TileInsertRequirements {
-      tabs2: 'titles';
+      stabs: 'titles';
     }
   }
 
-  export interface Tabs2Options<B extends string, E extends string> {
+  export interface STabsOptions<B extends string, E extends string> {
     tabs: [string, Tile][];
     /** @default 0 */
     selectedTab?: number;
@@ -33,24 +33,24 @@
     empty?: E;
   }
 
-  interface Tabs2Context<B extends string = string, E extends string = string> {
+  interface STabsContext<B extends string = string, E extends string = string> {
     bars: Registry<
       B,
-      Snippet<[Tiles['tabs2'], number, Tile | undefined]> | undefined
+      Snippet<[Tiles['stabs'], number, Tile | undefined]> | undefined
     >;
     empty?: Registry<
       E,
-      Snippet<[Tiles['tabs2'], number, Tile | undefined]> | undefined
+      Snippet<[Tiles['stabs'], number, Tile | undefined]> | undefined
     >;
   }
 
-  const TABS2_CONTEXT_KEY = Symbol('tabs2-context-key');
+  const STABS_CONTEXT_KEY = Symbol('stabs-context-key');
 
   export function setup<B extends string, E extends string>(
-    ctx: Tabs2Context<B, E>
+    ctx: STabsContext<B, E>
   ) {
-    setContext(TABS2_CONTEXT_KEY, ctx);
-    return (options: Tabs2Options<B, E>): Tiles['tabs2'] => {
+    setContext(STABS_CONTEXT_KEY, ctx);
+    return (options: STabsOptions<B, E>): Tiles['stabs'] => {
       const children: Tile[] = [];
       const titles: string[] = [];
       for (const tab of options.tabs) {
@@ -59,7 +59,7 @@
       }
       return {
         id: crypto.randomUUID(),
-        type: 'tabs2',
+        type: 'stabs',
         titles,
         children,
         bar: options.bar,
@@ -71,7 +71,7 @@
 
   export function onRemoveChild(
     ctx: TilerContext,
-    tile: Tiles['tabs2'],
+    tile: Tiles['stabs'],
     i: number
   ) {
     if (tile.children.length < 2) {
@@ -85,7 +85,7 @@
     tile.titles.splice(i, 1);
   }
 
-  export function onClear(_ctx: TilerContext, tile: Tiles['tabs2']) {
+  export function onClear(_ctx: TilerContext, tile: Tiles['stabs']) {
     if (tile.children.length > 0) {
       tile.selectedTab = -1;
       tile.children.length = 0;
@@ -95,11 +95,11 @@
 
   export function onInsert(
     _ctx: TilerContext,
-    tile: Tiles['tabs2'],
+    tile: Tiles['stabs'],
     i: number,
-    data: TileInsertData<'tabs2'>
+    data: TileInsertData<'stabs'>
   ) {
-    tile.selectedTab = insertWithDeduplication<'tabs2'>(tile, i, {
+    tile.selectedTab = insertWithDeduplication<'stabs'>(tile, i, {
       titles: data.titles,
       children: data.children,
     });
@@ -112,9 +112,9 @@
     child,
     index,
     parent,
-  }: TileProps<'tabs2'> = $props();
+  }: TileProps<'stabs'> = $props();
 
-  const tabsCtx = getContext<Tabs2Context>(TABS2_CONTEXT_KEY);
+  const tabsCtx = getContext<STabsContext>(STABS_CONTEXT_KEY);
 
   const bar = $derived(tabsCtx.bars.get(tile.bar));
   const empty = $derived(
@@ -122,7 +122,7 @@
   );
 </script>
 
-<div data-tabs2>
+<div data-stabs>
   {@render bar?.(tile, index, parent)}
   {#if tile.children[tile.selectedTab]}
     {@render child(tile.selectedTab)}

@@ -3,12 +3,12 @@
   import { ClonedGhost, DndContext } from '$lib/shared/dnd.svelte.js';
   import { Tiler, type Tiles } from '$lib/index.js';
   import * as Leaf from '$lib/tiles/leaf.svelte';
-  import * as Tabs2 from '$lib/tiles/tabs2.svelte';
+  import * as STabs from '$lib/tiles/stabs.svelte';
 
-  import * as tiles from './tiles.js';
+  import * as tiles from './tiles.ts';
 
   const createLeaf = Leaf.setup(fromConstant(leaf));
-  const createTabs = Tabs2.setup({
+  const createTabs = STabs.setup({
     bars: fromRecord({
       default: bar,
     }),
@@ -28,7 +28,7 @@
   const dnd = new DndContext({
     plugins: [
       new ClonedGhost({
-        get container() {
+        get portalTo() {
           return portalEl;
         },
       }),
@@ -36,15 +36,15 @@
   });
 </script>
 
-<div class="tabs2" bind:this={portalEl}>
+<div class="stabs" bind:this={portalEl}>
   <Tiler
     bind:layout
-    definitions={{ ...tiles, leaf: Leaf, tabs2: Tabs2 }}
+    definitions={{ ...tiles, leaf: Leaf, stabs: STabs }}
     {dnd}
   />
 </div>
 
-{#snippet bar(tile: Tiles['tabs2'])}
+{#snippet bar(tile: Tiles['stabs'])}
   <div class="tabs-bar">
     {#each tile.titles as title}
       <div class="tabs-header">
@@ -59,7 +59,7 @@
 {/snippet}
 
 <style>
-  :global .example .tabs2 {
+  :global .example .stabs {
     --color-bg: #f8f8f2;
     --color-selected: #ccccc7;
     --color-success: #a6e22e;
@@ -68,7 +68,7 @@
     color: var(--color-text);
     height: 200px;
 
-    [data-tabs2] {
+    [data-stabs] {
       display: flex;
       flex-direction: column;
       gap: 8px;
