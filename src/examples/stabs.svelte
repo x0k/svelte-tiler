@@ -46,7 +46,7 @@
 
 {#snippet bar(tile: Tiles['stabs'])}
   <div class="tabs-bar">
-    {#each tile.titles as title (tile.id)}
+    {#each tile.titles as title, i (tile.children[i].id)}
       <div class="tabs-header">
         {title}
       </div>
