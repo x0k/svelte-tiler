@@ -212,6 +212,10 @@ This approach keeps the core layout engine independent of styling concerns and e
 If the standard tiles do not meet your requirements, you can freely copy the tile’s source code into your own project,
 apply the necessary modifications, and replace the import with your customized version.
 
+## Community
+
+- [Discord](https://discord.gg/hVxFWk7dRn)
+
 ## License
 
 MIT

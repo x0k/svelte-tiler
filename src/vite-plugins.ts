@@ -169,13 +169,7 @@ async function fixTileImports(code: string): Promise<string> {
   if (ast.instance) {
     ast.instance.content = transformTileImports(ast.instance.content);
   }
-  const transformed = print(ast)
-    .code.replace('../model.js', 'svelte-tiler')
-    // TODO: It seems that the print statement is missing the keyword `module`.
-    // Remove this line when the problem is fixed.
-    // https://github.com/sveltejs/svelte/issues/17720
-    .replace("declare 'svelte-tiler'", "declare module 'svelte-tiler'")
-    .replaceAll(/\[(\w+)\s+extends\s+keyof\s+([^\]]+)\]/g, '[$1 in keyof $2]');
+  const transformed = print(ast).code.replace('../model.js', 'svelte-tiler');
   const config = await prettierConfig;
   return format(transformed, {
     ...config,
