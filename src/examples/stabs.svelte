@@ -1,17 +1,21 @@
 <script lang="ts">
-  import { fromConstant } from '$lib/shared/registry.js';
+  import { fromConstant, fromRecord } from '$lib/shared/registry.js';
   import { ClonedGhost, DndContext } from '$lib/shared/dnd.svelte.js';
   import { Tiler, type Tiles } from '$lib/index.js';
   import * as Leaf from '$lib/tiles/leaf.svelte';
-  import * as Tabs from '$lib/tiles/tabs.svelte';
+  import * as STabs from '$lib/tiles/stabs.svelte';
 
-  import * as tiles from './tiles.js';
+  import * as tiles from './tiles.ts';
 
   const createLeaf = Leaf.setup(fromConstant(leaf));
-  // Override app context
-  Tabs.setup({});
+  const createTabs = STabs.setup({
+    bars: fromRecord({
+      default: bar,
+    }),
+  });
   let layout = $state(
-    Tabs.create({
+    createTabs({
+      bar: 'default',
       tabs: [
         ['Foo', createLeaf('Foo')],
         ['Bar', createLeaf('Bar')],
@@ -32,16 +36,30 @@
   });
 </script>
 
-<div class="tabs" bind:this={portalEl}>
-  <Tiler bind:layout definitions={{ ...tiles, leaf: Leaf, tabs: Tabs }} {dnd} />
+<div class="stabs" bind:this={portalEl}>
+  <Tiler
+    bind:layout
+    definitions={{ ...tiles, leaf: Leaf, stabs: STabs }}
+    {dnd}
+  />
 </div>
+
+{#snippet bar(tile: Tiles['stabs'])}
+  <div class="tabs-bar">
+    {#each tile.titles as title, i (tile.children[i].id)}
+      <div class="tabs-header">
+        {title}
+      </div>
+    {/each}
+  </div>
+{/snippet}
 
 {#snippet leaf(tile: Tiles['leaf'])}
   {tile.name}
 {/snippet}
 
 <style>
-  :global .example .tabs {
+  :global .example .stabs {
     --color-bg: #f8f8f2;
     --color-selected: #ccccc7;
     --color-success: #a6e22e;
@@ -50,17 +68,14 @@
     color: var(--color-text);
     height: 200px;
 
-    [data-tabs] {
+    [data-stabs] {
       display: flex;
       flex-direction: column;
       gap: 8px;
       height: 100%;
       font-size: larger;
     }
-    [data-tabs-bar] {
-      display: flex;
-    }
-    [data-tabs-list] {
+    .tabs-bar {
       overflow-x: auto;
       scrollbar-width: thin;
       display: flex;
@@ -69,7 +84,7 @@
       background-color: var(--color-bg);
       border-radius: 10px;
     }
-    [data-tabs-header] {
+    .tabs-header {
       position: relative;
       width: min-content !important;
       height: min-content !important;

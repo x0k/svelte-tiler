@@ -25,6 +25,7 @@
   import * as Split from '$lib/tiles/split.svelte';
   import * as Leaf from '$lib/tiles/leaf.svelte';
   import * as Tabs from '$lib/tiles/tabs.svelte';
+  import * as STabs from '$lib/tiles/stabs.svelte';
 
   import {
     buildTree,
@@ -105,6 +106,7 @@
           activeTabsId = tile.id;
         },
       },
+      stabs: STabs,
     },
   });
   setTilerContext(ctx);
