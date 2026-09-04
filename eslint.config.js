@@ -43,6 +43,20 @@ export default defineConfig(
     },
   },
   {
+    files: ['src/lib/dnd3/**'],
+    rules: {
+      curly: ['error', 'all'],
+    },
+  },
+  {
+    files: ['src/lib/dnd3/**'],
+    ignores: ['src/lib/dnd3/**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'error',
+    },
+  },
+  {
     files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 
     languageOptions: {

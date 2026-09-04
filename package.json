@@ -49,6 +49,10 @@
       "types": "./dist/shared/*.d.ts",
       "default": "./dist/shared/*.js"
     },
+    "./dnd3": {
+      "types": "./dist/dnd3/index.d.ts",
+      "svelte": "./dist/dnd3/index.js"
+    },
     "./tiles/*.svelte": {
       "types": "./dist/tiles/*.svelte.d.ts",
       "svelte": "./dist/tiles/*.svelte"
